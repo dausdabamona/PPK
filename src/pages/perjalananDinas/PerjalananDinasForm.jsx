@@ -104,10 +104,6 @@ export default function PerjalananDinasForm() {
       instansiPembebanan: data.sumberDana,
     }
 
-    // Debug: log what's being sent
-    console.log('Form data:', data)
-    console.log('Payload to backend:', payload)
-
     try {
       const result = isEdit
         ? await updatePerjalananDinas(id, payload)
