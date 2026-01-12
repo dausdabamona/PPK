@@ -1,0 +1,6 @@
+export * from './client'
+export * as paketApi from './paket'
+export * as penyediaApi from './penyedia'
+export * as dokumenApi from './dokumen'
+export * as perjalananDinasApi from './perjalananDinas'
+export * as configApi from './config'
