@@ -1,6 +1,7 @@
 /**
  * 99_setup.gs
  * Initial Setup and Utility Functions
+ * Sprint 1: Database & Backend Skeleton
  */
 
 // ========================================
@@ -8,30 +9,50 @@
 // ========================================
 
 function setupAllSheets() {
-  console.log('Setting up all sheets...');
+  console.log('🚀 Setting up all sheets...');
 
-  // Config
-  setupConfigSheet();
-  console.log('- Config sheet created');
+  try {
+    // Use comprehensive schema setup if available
+    if (typeof setupAllDatabaseSheets === 'function') {
+      const result = setupAllDatabaseSheets();
+      console.log('✅ Database schema setup complete');
+      return result;
+    }
 
-  // Perjalanan Dinas
-  setupPerjalananDinasSheets();
-  console.log('- Perjalanan Dinas sheets created');
+    // Fallback to individual setup functions
+    // Config
+    setupConfigSheet();
+    console.log('✅ Config sheet created');
 
-  // Paket
-  setupPaketSheets();
-  console.log('- Paket sheets created');
+    // Perjalanan Dinas
+    setupPerjalananDinasSheets();
+    console.log('✅ Perjalanan Dinas sheets created');
 
-  // Penyedia
-  setupPenyediaSheet();
-  console.log('- Penyedia sheet created');
+    // Paket
+    setupPaketSheets();
+    console.log('✅ Paket sheets created');
 
-  // Numbering
-  setupNumberingSheet();
-  console.log('- Numbering sheet created');
+    // Penyedia
+    setupPenyediaSheet();
+    console.log('✅ Penyedia sheet created');
 
-  console.log('All sheets setup complete!');
-  return { success: true, message: 'All sheets created successfully' };
+    // Numbering
+    setupNumberingSheet();
+    console.log('✅ Numbering sheet created');
+
+    // Document Versions (if function exists)
+    if (typeof setupDocumentVersionSheet === 'function') {
+      setupDocumentVersionSheet();
+      console.log('✅ Document Versions sheet created');
+    }
+
+    console.log('✨ All sheets setup complete!');
+    return { success: true, message: 'All sheets created successfully' };
+
+  } catch (e) {
+    console.error('❌ Error during setup:', e);
+    return { success: false, error: e.message };
+  }
 }
 
 // ========================================
@@ -113,23 +134,97 @@ function resetAllNumbering() {
 // ========================================
 
 function testAPI() {
-  // Test health check
-  const result = routeRequest('health', 'GET', {}, {});
-  console.log('Health check:', JSON.stringify(result));
+  console.log('🧪 Starting API Tests...');
+  console.log('========================');
 
-  // Test config
-  const config = ConfigService.getConfig();
-  console.log('Config:', JSON.stringify(config));
+  const tests = [];
 
-  // Test PD list
-  const pdList = PerjalananDinasService.list();
-  console.log('PD Count:', pdList.length);
+  // Test 1: Health check
+  try {
+    const result = routeRequest('health', 'GET', {}, {});
+    tests.push({ name: 'Health Check', passed: result.success, result: result });
+    console.log('✅ Health check:', result.success ? 'PASS' : 'FAIL');
+  } catch (e) {
+    tests.push({ name: 'Health Check', passed: false, error: e.message });
+    console.log('❌ Health check: FAIL -', e.message);
+  }
 
-  // Test Paket list
-  const paketList = PaketService.list();
-  console.log('Paket Count:', paketList.length);
+  // Test 2: Config
+  try {
+    const config = ConfigService.getConfig();
+    tests.push({ name: 'Config Service', passed: !!config, result: config });
+    console.log('✅ Config Service:', config ? 'PASS' : 'FAIL');
+  } catch (e) {
+    tests.push({ name: 'Config Service', passed: false, error: e.message });
+    console.log('❌ Config Service: FAIL -', e.message);
+  }
 
+  // Test 3: PD Service
+  try {
+    const pdList = PerjalananDinasService.list();
+    tests.push({ name: 'PD Service', passed: true, count: pdList.length });
+    console.log('✅ PD Service: PASS (Count:', pdList.length, ')');
+  } catch (e) {
+    tests.push({ name: 'PD Service', passed: false, error: e.message });
+    console.log('❌ PD Service: FAIL -', e.message);
+  }
+
+  // Test 4: Paket Service
+  try {
+    const paketList = PaketService.list();
+    tests.push({ name: 'Paket Service', passed: true, count: paketList.length });
+    console.log('✅ Paket Service: PASS (Count:', paketList.length, ')');
+  } catch (e) {
+    tests.push({ name: 'Paket Service', passed: false, error: e.message });
+    console.log('❌ Paket Service: FAIL -', e.message);
+  }
+
+  // Test 5: Penyedia Service
+  try {
+    const penyediaList = PenyediaService.list();
+    tests.push({ name: 'Penyedia Service', passed: true, count: penyediaList.length });
+    console.log('✅ Penyedia Service: PASS (Count:', penyediaList.length, ')');
+  } catch (e) {
+    tests.push({ name: 'Penyedia Service', passed: false, error: e.message });
+    console.log('❌ Penyedia Service: FAIL -', e.message);
+  }
+
+  // Test 6: Numbering Service
+  try {
+    const patterns = NumberingService.getAllPatterns();
+    tests.push({ name: 'Numbering Service', passed: patterns.length > 0, count: patterns.length });
+    console.log('✅ Numbering Service: PASS (Patterns:', patterns.length, ')');
+  } catch (e) {
+    tests.push({ name: 'Numbering Service', passed: false, error: e.message });
+    console.log('❌ Numbering Service: FAIL -', e.message);
+  }
+
+  // Test 7: Database Stats (if available)
+  try {
+    if (typeof getDatabaseStats === 'function') {
+      const stats = getDatabaseStats();
+      tests.push({ name: 'Database Stats', passed: true, stats: stats });
+      console.log('✅ Database Stats: PASS (Sheets:', stats.existingSheets, '/', stats.totalSheets, ')');
+    }
+  } catch (e) {
+    tests.push({ name: 'Database Stats', passed: false, error: e.message });
+    console.log('❌ Database Stats: FAIL -', e.message);
+  }
+
+  console.log('========================');
+
+  const passed = tests.filter(t => t.passed).length;
+  const total = tests.length;
+
+  console.log('📊 Test Results:', passed, '/', total, 'passed');
   console.log('API test complete!');
+
+  return {
+    success: passed === total,
+    passed: passed,
+    total: total,
+    tests: tests
+  };
 }
 
 // ========================================

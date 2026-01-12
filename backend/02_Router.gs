@@ -170,6 +170,43 @@ function routeRequest(path, method, params, body) {
     return routeNumbering(segments.slice(1), method, params, body);
   }
 
+  // ==================== WORKFLOW EXTENDED ====================
+  if (segments[0] === 'workflow') {
+    // Check for v2 routes (Sprint 2)
+    if (segments[1] === 'v2') {
+      return routeWorkflowV2(segments.slice(2), method, params, body);
+    }
+    return routeWorkflowExtended(segments.slice(1), method, params, body);
+  }
+
+  // ==================== COMPLIANCE ====================
+  if (segments[0] === 'compliance') {
+    return routeCompliance(segments.slice(1), method, params, body);
+  }
+
+  // ==================== AUDIT (Sprint 2) ====================
+  if (segments[0] === 'audit') {
+    return routeAudit(segments.slice(1), method, params, body);
+  }
+
+  // ==================== TESTS (Sprint 2) ====================
+  if (segments[0] === 'tests') {
+    if (segments[1] === 'workflow') {
+      return runAllWorkflowTests();
+    }
+    return { success: false, error: 'Unknown test suite' };
+  }
+
+  // ==================== REPORTING ====================
+  if (segments[0] === 'reporting') {
+    return routeReporting(segments.slice(1), method, params, body);
+  }
+
+  // ==================== VERSIONING ====================
+  if (segments[0] === 'versioning') {
+    return routeVersioning(segments.slice(1), method, params, body);
+  }
+
   // ==================== SETUP ====================
   if (segments[0] === 'setup') {
     setupAllSheets();
@@ -181,6 +218,7 @@ function routeRequest(path, method, params, body) {
     return {
       success: true,
       message: 'PPK API is running',
+      version: '1.0.0',
       timestamp: new Date().toISOString()
     };
   }
@@ -625,4 +663,161 @@ function generatePDDocument(pdId, docType) {
     default:
       return { success: false, error: 'Jenis dokumen tidak dikenal: ' + docType };
   }
+}
+
+// ========================================
+// COMPLIANCE ROUTES (Sprint 2)
+// ========================================
+
+function routeCompliance(segments, method, params, body) {
+  // GET /compliance/paket/:id - Full compliance check
+  if (segments[0] === 'paket' && segments[1] && method === 'GET') {
+    return ComplianceService.check(segments[1]);
+  }
+
+  // GET /compliance/paket/:id/validate - Validate for target stage
+  if (segments[0] === 'paket' && segments[2] === 'validate' && method === 'GET') {
+    const paket = PaketService.getById(segments[1]);
+    if (!paket) {
+      return { success: false, error: 'Paket tidak ditemukan' };
+    }
+    const targetStage = params.targetStage || params.stage;
+    if (!targetStage) {
+      return { success: false, error: 'Parameter targetStage required' };
+    }
+    return {
+      success: true,
+      data: ComplianceValidator.validatePaketForStage(paket, targetStage)
+    };
+  }
+
+  // POST /compliance/paket/:id/validate - Validate with body
+  if (segments[0] === 'paket' && segments[2] === 'validate' && method === 'POST') {
+    const paket = PaketService.getById(segments[1]);
+    if (!paket) {
+      return { success: false, error: 'Paket tidak ditemukan' };
+    }
+    const targetStage = body.targetStage || body.stage;
+    if (!targetStage) {
+      return { success: false, error: 'Body parameter targetStage required' };
+    }
+    return {
+      success: true,
+      data: ComplianceValidator.validatePaketForStage(paket, targetStage)
+    };
+  }
+
+  // GET /compliance/pd/:id - PD compliance (basic)
+  if (segments[0] === 'pd' && segments[1] && method === 'GET') {
+    const pd = PerjalananDinasService.getById(segments[1]);
+    if (!pd) {
+      return { success: false, error: 'Perjalanan dinas tidak ditemukan' };
+    }
+    const targetStage = params.targetStage || params.stage || pd.status;
+    return {
+      success: true,
+      data: ComplianceValidator.validatePDForStage(pd, targetStage)
+    };
+  }
+
+  // Legacy support: GET /compliance/:paketId
+  if (segments.length === 1 && method === 'GET') {
+    return ComplianceService.check(segments[0]);
+  }
+
+  return { success: false, error: 'Compliance route not found' };
+}
+
+// ========================================
+// AUDIT ROUTES (Sprint 2)
+// ========================================
+
+function routeAudit(segments, method, params, body) {
+  // GET /audit/paket/:id - Full audit compliance status
+  if (segments[0] === 'paket' && segments[1] && method === 'GET') {
+    return AuditComplianceService.getPaketComplianceStatus(segments[1]);
+  }
+
+  // GET /audit/pd/:id - Full PD audit compliance status
+  if (segments[0] === 'pd' && segments[1] && method === 'GET') {
+    return AuditComplianceService.getPDComplianceStatus(segments[1]);
+  }
+
+  // GET /audit/violations - Get violation documentation
+  if (segments[0] === 'violations' && method === 'GET') {
+    return {
+      success: true,
+      data: getViolationDocumentation()
+    };
+  }
+
+  return { success: false, error: 'Audit route not found' };
+}
+
+// ========================================
+// ENHANCED WORKFLOW ROUTES (Sprint 2)
+// ========================================
+
+function routeWorkflowV2(segments, method, params, body) {
+  // ========== PAKET WORKFLOW ==========
+
+  // GET /workflow/v2/paket/:id/status
+  if (segments[0] === 'paket' && segments[2] === 'status' && method === 'GET') {
+    return {
+      success: true,
+      data: EnhancedWorkflowService.getPaketStatus(segments[1])
+    };
+  }
+
+  // POST /workflow/v2/paket/:id/advance
+  if (segments[0] === 'paket' && segments[2] === 'advance' && method === 'POST') {
+    return EnhancedWorkflowService.advancePaket(segments[1], body);
+  }
+
+  // POST /workflow/v2/paket/:id/revert
+  if (segments[0] === 'paket' && segments[2] === 'revert' && method === 'POST') {
+    return EnhancedWorkflowService.revertPaket(segments[1], body);
+  }
+
+  // POST /workflow/v2/paket/:id/cancel
+  if (segments[0] === 'paket' && segments[2] === 'cancel' && method === 'POST') {
+    return EnhancedWorkflowService.cancelPaket(segments[1], body.reason);
+  }
+
+  // GET /workflow/v2/paket/:id/preview/:targetState
+  if (segments[0] === 'paket' && segments[2] === 'preview' && method === 'GET') {
+    return EnhancedWorkflowService.previewPaketTransition(segments[1], segments[3] || params.targetState);
+  }
+
+  // ========== PD WORKFLOW ==========
+
+  // GET /workflow/v2/pd/:id/status
+  if (segments[0] === 'pd' && segments[2] === 'status' && method === 'GET') {
+    return {
+      success: true,
+      data: EnhancedWorkflowService.getPDStatus(segments[1])
+    };
+  }
+
+  // POST /workflow/v2/pd/:id/advance
+  if (segments[0] === 'pd' && segments[2] === 'advance' && method === 'POST') {
+    return EnhancedWorkflowService.advancePD(segments[1], body);
+  }
+
+  // POST /workflow/v2/pd/:id/revert
+  if (segments[0] === 'pd' && segments[2] === 'revert' && method === 'POST') {
+    return EnhancedWorkflowService.revertPD(segments[1], body);
+  }
+
+  // POST /workflow/v2/pd/:id/cancel
+  if (segments[0] === 'pd' && segments[2] === 'cancel' && method === 'POST') {
+    return EnhancedWorkflowService.cancelPD(segments[1], body.reason);
+  }
+
+  // GET /workflow/v2/pd/:id/preview/:targetState
+  if (segments[0] === 'pd' && segments[2] === 'preview' && method === 'GET') {
+    return EnhancedWorkflowService.previewPDTransition(segments[1], segments[3] || params.targetState);
+  }
+
+  return { success: false, error: 'Workflow v2 route not found' };
 }

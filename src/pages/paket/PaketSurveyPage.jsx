@@ -105,9 +105,15 @@ export default function PaketSurveyPage() {
         // Normalize survey data to handle different field names from API
         const data = rawData.map(normalizeSurvey)
         setSurveys(prev => ({ ...prev, [itemId]: data }))
+      } else {
+        // Notify user about the failure
+        toast.error(result.error || 'Gagal memuat data survey untuk item ini')
+        setSurveys(prev => ({ ...prev, [itemId]: [] }))
       }
     } catch (err) {
-      // Silent fail - surveys are optional
+      // Notify user about the error
+      toast.error('Gagal memuat data survey: ' + (err.message || 'terjadi kesalahan jaringan'))
+      setSurveys(prev => ({ ...prev, [itemId]: [] }))
     } finally {
       setLoadingSurveys(prev => ({ ...prev, [itemId]: false }))
     }

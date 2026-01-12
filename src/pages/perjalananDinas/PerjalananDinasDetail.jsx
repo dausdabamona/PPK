@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -14,6 +14,10 @@ import {
   Calendar,
   Users,
   Clock,
+  Printer,
+  Download,
+  X,
+  Eye,
 } from 'lucide-react'
 import { Card, CardBody, CardHeader, CardTitle } from '../../components/common/Card'
 import { Button, IconButton } from '../../components/common/Button'
@@ -29,6 +33,10 @@ import { TextField, SelectField, MoneyField, TextareaField } from '../../compone
 import { formatRupiah, formatTanggal, formatTanggalPendek } from '../../utils/formatters'
 import { STATUS_PD, STATUS_PD_LABELS, TINGKAT_BIAYA, JENIS_BIAYA_PD, SATUAN } from '../../utils/constants'
 import {
+  DOCUMENT_GENERATORS_PD,
+  getDocumentStyles,
+} from '../../utils/documentTemplates'
+import {
   getPerjalananDinasDetail,
   deletePerjalananDinas,
   getPelaksana,
@@ -42,6 +50,7 @@ import {
   advanceWorkflow,
   revertWorkflow,
 } from '../../api/perjalananDinas'
+import { getConfig } from '../../api/config'
 import toast from 'react-hot-toast'
 
 const getId = (item) => item?.id || item?._id || item?.pelaksanaId || item?.biayaId || item?.rowId || item?.ID || null
@@ -77,6 +86,143 @@ const normalizeBiaya = (data) => {
     hargaSatuan: parseFloat(item.hargaSatuan) || 0,
     total: parseFloat(item.total) || 0,
   }))
+}
+
+// Default settings for document generation
+const DEFAULT_SETTINGS = {
+  namaPPK: '',
+  nipPPK: '',
+  satuanKerja: '',
+  namaInstansi: '',
+  alamatKantor: '',
+  tempatTTD: '',
+  namaBendahara: '',
+  nipBendahara: '',
+}
+
+// Load settings from localStorage
+const loadSettings = () => {
+  try {
+    const saved = localStorage.getItem('ppk_document_settings')
+    if (saved) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
+    }
+  } catch (e) {
+    console.error('Failed to load settings:', e)
+  }
+  return DEFAULT_SETTINGS
+}
+
+// Map config keys to settings object
+const mapConfigToSettings = (configData) => {
+  const settings = { ...DEFAULT_SETTINGS }
+  if (Array.isArray(configData)) {
+    configData.forEach(item => {
+      switch (item.key) {
+        case 'ppk_nama': settings.namaPPK = item.value || ''; break
+        case 'ppk_nip': settings.nipPPK = item.value || ''; break
+        case 'satker_nama': settings.satuanKerja = item.value || ''; break
+        case 'satker_alamat': settings.alamatKantor = item.value || ''; break
+        case 'satker_kota': settings.tempatTTD = item.value || ''; break
+        case 'instansi_nama': settings.namaInstansi = item.value || ''; break
+        case 'bendahara_nama': settings.namaBendahara = item.value || ''; break
+        case 'bendahara_nip': settings.nipBendahara = item.value || ''; break
+      }
+    })
+  }
+  return settings
+}
+
+// Document Preview Component
+function DocumentPreview({ document: docData, onClose }) {
+  const iframeRef = useRef(null)
+
+  useEffect(() => {
+    if (iframeRef.current && docData) {
+      const iframeDoc = iframeRef.current.contentDocument
+      iframeDoc.open()
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${docData.title}</title>
+          ${getDocumentStyles()}
+        </head>
+        <body>
+          ${docData.content}
+        </body>
+        </html>
+      `)
+      iframeDoc.close()
+    }
+  }, [docData])
+
+  const handlePrint = () => {
+    if (iframeRef.current) {
+      iframeRef.current.contentWindow.print()
+    }
+  }
+
+  const handleDownload = () => {
+    if (!docData) return
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${docData.title}</title>
+        ${getDocumentStyles()}
+      </head>
+      <body>
+        ${docData.content}
+      </body>
+      </html>
+    `
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const link = window.document.createElement('a')
+    link.href = url
+    link.download = `${docData.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`
+    window.document.body.appendChild(link)
+    link.click()
+    window.document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  if (!docData) return null
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">{docData.title}</h2>
+            {docData.subtitle && (
+              <p className="text-sm text-slate-500">{docData.subtitle}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" icon={Printer} onClick={handlePrint}>
+              Cetak
+            </Button>
+            <Button variant="outline" size="sm" icon={Download} onClick={handleDownload}>
+              Download
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden bg-slate-100 p-4">
+          <iframe
+            ref={iframeRef}
+            className="w-full h-full bg-white shadow-lg"
+            title="Document Preview"
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const initialPelaksanaForm = {
@@ -131,6 +277,10 @@ export default function PerjalananDinasDetail() {
   const [deleteBiayaModal, setDeleteBiayaModal] = useState({ open: false, item: null })
   const [deletingBiaya, setDeletingBiaya] = useState(false)
 
+  // Document generation state
+  const [previewDoc, setPreviewDoc] = useState(null)
+  const [docSettings, setDocSettings] = useState(loadSettings())
+
   const fetchPelaksana = useCallback(async (pdId) => {
     if (!pdId) return
     setLoadingPelaksana(true)
@@ -140,9 +290,13 @@ export default function PerjalananDinasDetail() {
         const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
         const data = normalizePelaksana(rawData)
         setPelaksana(data)
+      } else {
+        toast.error(result.error || 'Gagal memuat data pelaksana')
+        setPelaksana([])
       }
     } catch (err) {
-      // Silently handle error - data will remain empty
+      toast.error('Gagal memuat data pelaksana: ' + (err.message || 'terjadi kesalahan jaringan'))
+      setPelaksana([])
     } finally {
       setLoadingPelaksana(false)
     }
@@ -157,9 +311,13 @@ export default function PerjalananDinasDetail() {
         const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
         const data = normalizeBiaya(rawData)
         setBiaya(data)
+      } else {
+        toast.error(result.error || 'Gagal memuat data biaya')
+        setBiaya([])
       }
     } catch (err) {
-      // Silently handle error - data will remain empty
+      toast.error('Gagal memuat data biaya: ' + (err.message || 'terjadi kesalahan jaringan'))
+      setBiaya([])
     } finally {
       setLoadingBiaya(false)
     }
@@ -192,7 +350,51 @@ export default function PerjalananDinasDetail() {
 
   useEffect(() => {
     fetchData()
+    loadSettingsFromAPI()
   }, [fetchData])
+
+  // Load document settings from API
+  const loadSettingsFromAPI = async () => {
+    try {
+      const result = await getConfig()
+      if (result.success && result.data) {
+        const apiSettings = mapConfigToSettings(result.data)
+        const merged = { ...loadSettings(), ...apiSettings }
+        setDocSettings(merged)
+      }
+    } catch (e) {
+      // Use local settings as fallback
+      console.warn('Failed to load settings from API:', e)
+    }
+  }
+
+  // Generate document
+  const handleGenerateDocument = (docType) => {
+    const generator = DOCUMENT_GENERATORS_PD[docType]
+    if (!generator) {
+      toast.error('Generator dokumen tidak ditemukan')
+      return
+    }
+
+    // Validate required data
+    if (docType === 'kuitansi_rampung' && biaya.length === 0) {
+      toast.error('Tambahkan data biaya terlebih dahulu sebelum generate Kuitansi Rampung')
+      return
+    }
+
+    if (pelaksana.length === 0) {
+      toast.error('Tambahkan data pelaksana terlebih dahulu')
+      return
+    }
+
+    try {
+      const doc = generator(pd, pelaksana, biaya, docSettings)
+      setPreviewDoc(doc)
+    } catch (err) {
+      console.error('Error generating document:', err)
+      toast.error('Gagal generate dokumen: ' + (err.message || 'terjadi kesalahan'))
+    }
+  }
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -741,6 +943,92 @@ export default function PerjalananDinasDetail() {
         </Card>
       </div>
 
+      {/* Quick Document Generation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Generate Dokumen
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Surat Tugas */}
+            <div className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-slate-600" />
+                <h4 className="font-medium text-slate-900">Surat Tugas</h4>
+              </div>
+              <p className="text-sm text-slate-500 mb-3">Surat penugasan perjalanan dinas</p>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Eye}
+                onClick={() => handleGenerateDocument('surat_tugas')}
+                className="w-full"
+                disabled={pelaksana.length === 0}
+              >
+                Generate
+              </Button>
+            </div>
+
+            {/* SPPD */}
+            <div className="p-4 border-2 border-primary-200 bg-primary-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-primary-600" />
+                <h4 className="font-medium text-slate-900">SPPD</h4>
+                <Badge variant="primary" size="sm">Penting</Badge>
+              </div>
+              <p className="text-sm text-slate-500 mb-3">Surat Perintah Perjalanan Dinas</p>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Eye}
+                onClick={() => handleGenerateDocument('sppd')}
+                className="w-full"
+                disabled={pelaksana.length === 0}
+              >
+                Generate SPPD
+              </Button>
+            </div>
+
+            {/* Kuitansi Rampung */}
+            <div className="p-4 border-2 border-primary-200 bg-primary-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-5 h-5 text-primary-600" />
+                <h4 className="font-medium text-slate-900">Kuitansi Rampung</h4>
+                <Badge variant="primary" size="sm">Penting</Badge>
+              </div>
+              <p className="text-sm text-slate-500 mb-3">Bukti pertanggungjawaban biaya</p>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Eye}
+                onClick={() => handleGenerateDocument('kuitansi_rampung')}
+                className="w-full"
+                disabled={pelaksana.length === 0 || biaya.length === 0}
+              >
+                Generate Kuitansi
+              </Button>
+            </div>
+          </div>
+
+          {/* Validation warnings */}
+          {(pelaksana.length === 0 || biaya.length === 0) && (
+            <div className="mt-4 p-3 bg-warning-50 border border-warning-200 rounded-lg">
+              <p className="text-sm text-warning-700">
+                {pelaksana.length === 0 && biaya.length === 0
+                  ? 'Tambahkan data pelaksana dan biaya untuk generate dokumen'
+                  : pelaksana.length === 0
+                    ? 'Tambahkan data pelaksana untuk generate dokumen'
+                    : 'Tambahkan data biaya untuk generate Kuitansi Rampung'
+                }
+              </p>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
       {/* Tabs content */}
       <Card>
         <CardBody>
@@ -950,6 +1238,14 @@ export default function PerjalananDinasDetail() {
         confirmText="Ya, Hapus"
         loading={deletingBiaya}
       />
+
+      {/* Document Preview */}
+      {previewDoc && (
+        <DocumentPreview
+          document={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+        />
+      )}
     </div>
   )
 }

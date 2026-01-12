@@ -155,15 +155,25 @@ export default function PaketDetail() {
     setPenyediaModal(true)
     setSelectedPenyediaId(paket.penyediaId || '')
     setPenyediaLoading(true)
+    setPenyediaList([]) // Reset list while loading
 
     try {
       const result = await getPenyediaList()
       if (result.success) {
         const data = Array.isArray(result.data) ? result.data : result.data?.items || []
         setPenyediaList(data)
+        if (data.length === 0) {
+          toast.error('Belum ada penyedia terdaftar. Silakan tambah penyedia terlebih dahulu.')
+        }
+      } else {
+        toast.error(result.error || 'Gagal memuat daftar penyedia')
+        // Close modal if fetch fails
+        setPenyediaModal(false)
       }
     } catch (err) {
-      toast.error('Gagal memuat daftar penyedia')
+      toast.error('Gagal memuat daftar penyedia: ' + (err.message || 'terjadi kesalahan jaringan'))
+      // Close modal if fetch fails
+      setPenyediaModal(false)
     } finally {
       setPenyediaLoading(false)
     }
@@ -175,34 +185,39 @@ export default function PaketDetail() {
       return
     }
 
+    const selectedPenyedia = penyediaList.find(p =>
+      (p.id || p._id || p.penyediaId) === selectedPenyediaId
+    )
+
+    if (!selectedPenyedia) {
+      toast.error('Penyedia yang dipilih tidak ditemukan. Silakan refresh dan coba lagi.')
+      return
+    }
+
     setAssigningPenyedia(true)
     try {
-      const selectedPenyedia = penyediaList.find(p =>
-        (p.id || p._id || p.penyediaId) === selectedPenyediaId
-      )
-
       const result = await updatePaket(id, {
         ...paket,
         penyediaId: selectedPenyediaId,
-        penyedia: selectedPenyedia ? {
+        penyedia: {
           id: selectedPenyediaId,
           nama: selectedPenyedia.nama,
           npwp: selectedPenyedia.npwp,
           alamat: selectedPenyedia.alamat,
           noRekening: selectedPenyedia.noRekening,
           namaBank: selectedPenyedia.namaBank,
-        } : null,
+        },
       })
 
       if (result.success) {
-        toast.success('Penyedia berhasil ditetapkan')
+        toast.success(`Penyedia "${selectedPenyedia.nama}" berhasil ditetapkan`)
         setPenyediaModal(false)
         fetchPaketData()
       } else {
-        toast.error(result.error || 'Gagal menetapkan penyedia')
+        toast.error(result.error || 'Gagal menetapkan penyedia. Silakan coba lagi.')
       }
     } catch (err) {
-      toast.error('Terjadi kesalahan')
+      toast.error('Gagal menetapkan penyedia: ' + (err.message || 'terjadi kesalahan jaringan'))
     } finally {
       setAssigningPenyedia(false)
     }
@@ -222,10 +237,10 @@ export default function PaketDetail() {
         setPenyediaModal(false)
         fetchPaketData()
       } else {
-        toast.error(result.error || 'Gagal menghapus penyedia')
+        toast.error(result.error || 'Gagal menghapus penyedia. Silakan coba lagi.')
       }
     } catch (err) {
-      toast.error('Terjadi kesalahan')
+      toast.error('Gagal menghapus penyedia: ' + (err.message || 'terjadi kesalahan jaringan'))
     } finally {
       setAssigningPenyedia(false)
     }
