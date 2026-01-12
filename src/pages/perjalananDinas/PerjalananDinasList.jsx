@@ -15,6 +15,30 @@ import { getPerjalananDinasList, deletePerjalananDinas } from '../../api/perjala
 import { usePerjalananDinasStore } from '../../store'
 import toast from 'react-hot-toast'
 
+// Helper to get ID from various possible field names
+const getId = (item) => {
+  if (!item) return null
+  const id = item.id ?? item.pdId ?? item._id ?? item.ID ?? item.Id ?? item.key
+  if (id === null || id === undefined) {
+    console.warn('Could not find ID in PD item:', Object.keys(item), item)
+  }
+  return id
+}
+
+// Helper to normalize field names from Google Sheet to frontend format
+const normalizeData = (data) => {
+  return data.map((item, index) => ({
+    ...item,
+    // Ensure ID exists
+    id: getId(item) || `pd-${index}`,
+    // Map field names
+    tujuanDinas: item.tujuanDinas || item.tujuan || item.maksudTujuan || '',
+    nomorSuratTugas: item.nomorSuratTugas || item.nomorST || '',
+    nomorSPPD: item.nomorSPPD || '',
+    tanggalSuratTugas: item.tanggalSuratTugas || item.tanggalST || '',
+  }))
+}
+
 export default function PerjalananDinasList() {
   const navigate = useNavigate()
   const { pdList, setPdList, pdLoading, setPdLoading, filters, setFilters, resetFilters } = usePerjalananDinasStore()
@@ -34,7 +58,10 @@ export default function PerjalananDinasList() {
       const result = await getPerjalananDinasList(filters)
 
       if (result.success) {
-        const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        console.log('API Response - PD List:', result.data) // Debug log
+        if (rawData.length > 0) console.log('Sample PD item:', Object.keys(rawData[0]), rawData[0]) // Debug log
+        const data = normalizeData(rawData)
         setPdList(data)
       } else {
         setError(result.error || 'Gagal memuat data perjalanan dinas')
@@ -51,7 +78,7 @@ export default function PerjalananDinasList() {
 
     setDeleting(true)
     try {
-      const result = await deletePerjalananDinas(deleteModal.pd.id)
+      const result = await deletePerjalananDinas(getId(deleteModal.pd))
 
       if (result.success) {
         toast.success('Perjalanan dinas berhasil dihapus')
@@ -146,7 +173,7 @@ export default function PerjalananDinasList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/perjalanan-dinas/${row.original.id}`)
+              navigate(`/perjalanan-dinas/${getId(row.original)}`)
             }}
             title="Lihat Detail"
           />
@@ -156,7 +183,7 @@ export default function PerjalananDinasList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/perjalanan-dinas/${row.original.id}/edit`)
+              navigate(`/perjalanan-dinas/${getId(row.original)}/edit`)
             }}
             title="Edit"
           />
@@ -230,7 +257,7 @@ export default function PerjalananDinasList() {
               data={filteredData}
               loading={pdLoading}
               searchable={false}
-              onRowClick={(row) => navigate(`/perjalanan-dinas/${row.id}`)}
+              onRowClick={(row) => navigate(`/perjalanan-dinas/${getId(row)}`)}
               emptyMessage="Tidak ada perjalanan dinas yang sesuai filter"
             />
           </CardBody>

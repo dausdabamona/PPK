@@ -14,7 +14,37 @@ import { SATUAN } from '../../utils/constants'
 import { getPaketDetail, getPaketItems, addPaketItem, updateItem, deleteItem } from '../../api/paket'
 import toast from 'react-hot-toast'
 
-const getId = (item) => item?.id || item?._id || item?.itemId || item?.rowId || item?.ID || null
+// Helper to get ID from various possible field names
+const getId = (item) => {
+  if (!item) return null
+  const id = item.id ?? item.itemId ?? item._id ?? item.rowId ?? item.ID ?? item.Id
+  if (id === null || id === undefined) {
+    console.warn('Could not find ID in item:', Object.keys(item), item)
+  }
+  return id
+}
+
+// Helper to parse Indonesian number format (30.472,00 -> 30472)
+const parseIndonesianNumber = (value) => {
+  if (typeof value === 'number') return value
+  if (!value || typeof value !== 'string') return 0
+  // Remove thousand separator (.) and replace decimal separator (,) with (.)
+  const cleaned = value.replace(/\./g, '').replace(',', '.')
+  const parsed = parseFloat(cleaned)
+  return isNaN(parsed) ? 0 : parsed
+}
+
+// Normalize item data from Google Sheet
+const normalizeItem = (item, index) => ({
+  ...item,
+  id: getId(item) || `item-${index}`,
+  namaBarang: item.namaBarang || item.nama || '',
+  volume: parseIndonesianNumber(item.volume) || 1,
+  hargaSatuan: parseIndonesianNumber(item.hargaSatuan) || 0,
+  jumlah: parseIndonesianNumber(item.jumlah) || 0,
+  overhead: parseIndonesianNumber(item.overhead) || 0,
+  biayaLain: parseIndonesianNumber(item.biayaLain) || 0,
+})
 
 const initialFormData = {
   namaBarang: '',
@@ -64,7 +94,10 @@ export default function PaketItemsPage() {
       }
 
       if (itemsResult.success) {
-        const data = Array.isArray(itemsResult.data) ? itemsResult.data : itemsResult.data?.items || []
+        const rawData = Array.isArray(itemsResult.data) ? itemsResult.data : itemsResult.data?.items || []
+        console.log('API Response - Items:', itemsResult.data) // Debug log
+        if (rawData.length > 0) console.log('Sample item:', Object.keys(rawData[0]), rawData[0]) // Debug log
+        const data = rawData.map(normalizeItem)
         setItems(data)
       }
     } catch (err) {
