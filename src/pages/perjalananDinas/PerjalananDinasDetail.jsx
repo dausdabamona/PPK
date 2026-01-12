@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -131,11 +131,43 @@ export default function PerjalananDinasDetail() {
   const [deleteBiayaModal, setDeleteBiayaModal] = useState({ open: false, item: null })
   const [deletingBiaya, setDeletingBiaya] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, [id])
+  const fetchPelaksana = useCallback(async (pdId) => {
+    if (!pdId) return
+    setLoadingPelaksana(true)
+    try {
+      const result = await getPelaksana(pdId)
+      if (result.success) {
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizePelaksana(rawData)
+        setPelaksana(data)
+      }
+    } catch (err) {
+      // Silently handle error - data will remain empty
+    } finally {
+      setLoadingPelaksana(false)
+    }
+  }, [])
 
-  const fetchData = async () => {
+  const fetchBiaya = useCallback(async (pdId) => {
+    if (!pdId) return
+    setLoadingBiaya(true)
+    try {
+      const result = await getBiaya(pdId)
+      if (result.success) {
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizeBiaya(rawData)
+        setBiaya(data)
+      }
+    } catch (err) {
+      // Silently handle error - data will remain empty
+    } finally {
+      setLoadingBiaya(false)
+    }
+  }, [])
+
+  const fetchData = useCallback(async () => {
+    if (!id) return
+
     setLoading(true)
     setError(null)
 
@@ -143,9 +175,11 @@ export default function PerjalananDinasDetail() {
       const result = await getPerjalananDinasDetail(id)
       if (result.success) {
         setPd(result.data)
-        // Fetch pelaksana and biaya
-        fetchPelaksana()
-        fetchBiaya()
+        // Fetch pelaksana and biaya in parallel with the same ID
+        await Promise.all([
+          fetchPelaksana(id),
+          fetchBiaya(id)
+        ])
       } else {
         setError(result.error || 'Gagal memuat data perjalanan dinas')
       }
@@ -154,39 +188,11 @@ export default function PerjalananDinasDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, fetchPelaksana, fetchBiaya])
 
-  const fetchPelaksana = async () => {
-    setLoadingPelaksana(true)
-    try {
-      const result = await getPelaksana(id)
-      if (result.success) {
-        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
-        const data = normalizePelaksana(rawData)
-        setPelaksana(data)
-      }
-    } catch (err) {
-      console.error('Error fetching pelaksana:', err)
-    } finally {
-      setLoadingPelaksana(false)
-    }
-  }
-
-  const fetchBiaya = async () => {
-    setLoadingBiaya(true)
-    try {
-      const result = await getBiaya(id)
-      if (result.success) {
-        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
-        const data = normalizeBiaya(rawData)
-        setBiaya(data)
-      }
-    } catch (err) {
-      console.error('Error fetching biaya:', err)
-    } finally {
-      setLoadingBiaya(false)
-    }
-  }
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -266,7 +272,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success(isEdit ? 'Pelaksana berhasil diperbarui' : 'Pelaksana berhasil ditambahkan')
         setPelaksanaModal({ open: false, item: null })
-        fetchPelaksana()
+        fetchPelaksana(id)
       } else {
         toast.error(result.error || 'Gagal menyimpan pelaksana')
       }
@@ -286,7 +292,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success('Pelaksana berhasil dihapus')
         setDeletePelaksanaModal({ open: false, item: null })
-        fetchPelaksana()
+        fetchPelaksana(id)
       } else {
         toast.error(result.error || 'Gagal menghapus pelaksana')
       }
@@ -330,7 +336,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success(isEdit ? 'Biaya berhasil diperbarui' : 'Biaya berhasil ditambahkan')
         setBiayaModal({ open: false, item: null })
-        fetchBiaya()
+        fetchBiaya(id)
       } else {
         toast.error(result.error || 'Gagal menyimpan biaya')
       }
@@ -350,7 +356,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success('Biaya berhasil dihapus')
         setDeleteBiayaModal({ open: false, item: null })
-        fetchBiaya()
+        fetchBiaya(id)
       } else {
         toast.error(result.error || 'Gagal menghapus biaya')
       }

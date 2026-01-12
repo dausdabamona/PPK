@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -49,13 +49,9 @@ export default function PaketForm() {
     },
   })
 
-  useEffect(() => {
-    if (isEdit) {
-      fetchPaket()
-    }
-  }, [id])
+  const fetchPaket = useCallback(async () => {
+    if (!id) return
 
-  const fetchPaket = async () => {
     setLoading(true)
     setError(null)
 
@@ -81,7 +77,13 @@ export default function PaketForm() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, reset])
+
+  useEffect(() => {
+    if (isEdit) {
+      fetchPaket()
+    }
+  }, [isEdit, fetchPaket])
 
   const onSubmit = async (data) => {
     setSubmitting(true)

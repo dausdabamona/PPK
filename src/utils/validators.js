@@ -157,7 +157,16 @@ export const biayaPdSchema = z.object({
     .max(500, maxLength('Keterangan', 500))
     .optional(),
   jumlah: z.number()
-    .min(0, invalidNumber('Jumlah')),
+    .min(0, invalidNumber('Jumlah'))
+    .default(1),
+  satuan: z.string()
+    .default('OH'),
+  hargaSatuan: z.number()
+    .min(0, invalidNumber('Harga Satuan'))
+    .default(0),
+  total: z.number()
+    .min(0, invalidNumber('Total'))
+    .default(0),
 })
 
 // Schema untuk Upload Lampiran

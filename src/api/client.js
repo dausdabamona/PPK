@@ -57,9 +57,9 @@ async function apiCall(method, path, data = {}, options = {}) {
   let lastError = null
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const { controller, timeoutId } = createTimeoutController(timeout)
+    const { controller, timeoutId } = createTimeoutController(timeout)
 
+    try {
       let response
 
       if (method === 'GET') {
@@ -101,6 +101,9 @@ async function apiCall(method, path, data = {}, options = {}) {
       return result
 
     } catch (error) {
+      // Always clear timeout to prevent memory leak
+      clearTimeout(timeoutId)
+
       lastError = error
 
       // Don't retry on API-level errors (success: false)
@@ -116,7 +119,6 @@ async function apiCall(method, path, data = {}, options = {}) {
 
       if (isNetworkError && attempt < retries) {
         const delay = RETRY_DELAY * Math.pow(2, attempt) // Exponential backoff
-        console.warn(`API call failed, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`)
         await sleep(delay)
         continue
       }

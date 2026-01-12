@@ -1,4 +1,4 @@
-import { STATUS_COLORS, STATUS_LABELS, STATUS_PD_LABELS } from '../../utils/constants'
+import { STATUS_COLORS, STATUS_LABELS, STATUS_PD_LABELS, STATUS_PD_COLORS } from '../../utils/constants'
 
 const colorClasses = {
   primary: 'bg-primary-100 text-primary-800',
@@ -18,7 +18,8 @@ export function Badge({ children, color = 'gray', className = '' }) {
 
 export function StatusBadge({ status, type = 'paket' }) {
   const labels = type === 'pd' ? STATUS_PD_LABELS : STATUS_LABELS
-  const color = STATUS_COLORS[status] || 'gray'
+  const colors = type === 'pd' ? STATUS_PD_COLORS : STATUS_COLORS
+  const color = colors[status] || 'gray'
   const label = labels[status] || status
 
   return <Badge color={color}>{label}</Badge>

@@ -20,14 +20,9 @@ import toast from 'react-hot-toast'
 const getId = (item) => {
   if (!item) return null
   // Try various common ID field names used by different backends
-  const id = item.id ?? item._id ?? item.paketId ?? item.rowId ?? item.ID ??
-             item.row ?? item.rowNumber ?? item.index ?? item.no ?? item.No ??
-             item.Id ?? item.PaketId ?? item.paket_id ?? item.key ?? item.uuid
-  // Log warning if no ID found to help debug
-  if (id === null || id === undefined) {
-    console.warn('Could not find ID in item. Available keys:', Object.keys(item), 'Item:', item)
-  }
-  return id
+  return item.id ?? item._id ?? item.paketId ?? item.rowId ?? item.ID ??
+         item.row ?? item.rowNumber ?? item.index ?? item.no ?? item.No ??
+         item.Id ?? item.PaketId ?? item.paket_id ?? item.key ?? item.uuid ?? null
 }
 
 export default function PaketList() {
@@ -51,15 +46,12 @@ export default function PaketList() {
 
       if (result.success) {
         let data = Array.isArray(result.data) ? result.data : result.data?.items || []
-        console.log('API Response - Paket List:', result.data) // Debug log
-        console.log('Parsed data:', data) // Debug log
-        if (data.length > 0) console.log('Sample item structure:', Object.keys(data[0]), data[0]) // Debug log
 
         // Normalize each item to ensure it has an 'id' property
-        // Always set id from getId() result or fallback to index-based ID
+        // Use numeric index + 1 as fallback to maintain compatibility with numeric ID backends
         data = data.map((item, index) => ({
           ...item,
-          id: getId(item) ?? `paket-${index}`,
+          id: getId(item) ?? (index + 1),
         }))
 
         setPaketList(data)

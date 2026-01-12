@@ -18,19 +18,15 @@ import toast from 'react-hot-toast'
 // Helper to get ID from various possible field names
 const getId = (item) => {
   if (!item) return null
-  const id = item.id ?? item.pdId ?? item._id ?? item.ID ?? item.Id ?? item.key
-  if (id === null || id === undefined) {
-    console.warn('Could not find ID in PD item:', Object.keys(item), item)
-  }
-  return id
+  return item.id ?? item.pdId ?? item._id ?? item.ID ?? item.Id ?? item.key ?? null
 }
 
 // Helper to normalize field names from Google Sheet to frontend format
 const normalizeData = (data) => {
   return data.map((item, index) => ({
     ...item,
-    // Ensure ID exists
-    id: getId(item) || `pd-${index}`,
+    // Ensure ID exists - use numeric fallback for backend compatibility
+    id: getId(item) || (index + 1),
     // Map field names
     tujuanDinas: item.tujuanDinas || item.tujuan || item.maksudTujuan || '',
     nomorSuratTugas: item.nomorSuratTugas || item.nomorST || '',
@@ -59,8 +55,6 @@ export default function PerjalananDinasList() {
 
       if (result.success) {
         const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
-        console.log('API Response - PD List:', result.data) // Debug log
-        if (rawData.length > 0) console.log('Sample PD item:', Object.keys(rawData[0]), rawData[0]) // Debug log
         const data = normalizeData(rawData)
         setPdList(data)
       } else {
@@ -183,7 +177,7 @@ export default function PerjalananDinasList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/perjalanan-dinas/${getId(row.original)}/edit`)
+              navigate(`/perjalanan-dinas/${row.original.id}/edit`)
             }}
             title="Edit"
           />
