@@ -29,28 +29,51 @@ export function FormField({ label, error, helpText, required, children, classNam
   )
 }
 
-// Text Input
+// Text Input - combines forwarded ref with props ref (for react-hook-form)
 export const Input = forwardRef(function Input(
   { error, className = '', ...props },
-  ref
+  forwardedRef
 ) {
+  // Combine forwarded ref with ref from props (from register())
+  const handleRef = (el) => {
+    // Handle forwarded ref
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(el)
+    } else if (forwardedRef) {
+      forwardedRef.current = el
+    }
+    // Handle ref from props (from react-hook-form register)
+    if (typeof props.ref === 'function') {
+      props.ref(el)
+    } else if (props.ref) {
+      props.ref.current = el
+    }
+  }
+
   return (
     <input
-      ref={ref}
+      ref={handleRef}
       className={`input ${error ? 'input-error' : ''} ${className}`}
       {...props}
     />
   )
 })
 
-// Textarea
+// Textarea - combines forwarded ref with props ref (for react-hook-form)
 export const Textarea = forwardRef(function Textarea(
   { error, className = '', rows = 3, ...props },
-  ref
+  forwardedRef
 ) {
+  const handleRef = (el) => {
+    if (typeof forwardedRef === 'function') forwardedRef(el)
+    else if (forwardedRef) forwardedRef.current = el
+    if (typeof props.ref === 'function') props.ref(el)
+    else if (props.ref) props.ref.current = el
+  }
+
   return (
     <textarea
-      ref={ref}
+      ref={handleRef}
       rows={rows}
       className={`input resize-none ${error ? 'input-error' : ''} ${className}`}
       {...props}
@@ -58,15 +81,22 @@ export const Textarea = forwardRef(function Textarea(
   )
 })
 
-// Select
+// Select - combines forwarded ref with props ref (for react-hook-form)
 export const Select = forwardRef(function Select(
   { error, options = [], placeholder = 'Pilih...', className = '', ...props },
-  ref
+  forwardedRef
 ) {
+  const handleRef = (el) => {
+    if (typeof forwardedRef === 'function') forwardedRef(el)
+    else if (forwardedRef) forwardedRef.current = el
+    if (typeof props.ref === 'function') props.ref(el)
+    else if (props.ref) props.ref.current = el
+  }
+
   return (
     <div className="relative">
       <select
-        ref={ref}
+        ref={handleRef}
         className={`input appearance-none pr-10 ${error ? 'input-error' : ''} ${className}`}
         {...props}
       >
