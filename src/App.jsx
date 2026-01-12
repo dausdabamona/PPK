@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/layout'
 import { LoadingPage } from './components/common/Loading'
+import { ErrorBoundary } from './components/common/ErrorState'
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -10,23 +11,25 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const PaketList = lazy(() => import('./pages/paket/PaketList'))
 const PaketDetail = lazy(() => import('./pages/paket/PaketDetail'))
 const PaketForm = lazy(() => import('./pages/paket/PaketForm'))
+const PaketItemsPage = lazy(() => import('./pages/paket/PaketItemsPage'))
+const PaketSurveyPage = lazy(() => import('./pages/paket/PaketSurveyPage'))
+const PaketHPSPage = lazy(() => import('./pages/paket/PaketHPSPage'))
+const PaketDokumenPage = lazy(() => import('./pages/paket/PaketDokumenPage'))
+const PaketCompliancePage = lazy(() => import('./pages/paket/PaketCompliancePage'))
+const PaketLampiranPage = lazy(() => import('./pages/paket/PaketLampiranPage'))
 
 // Penyedia pages
 const PenyediaList = lazy(() => import('./pages/penyedia/PenyediaList'))
 
 // Perjalanan Dinas pages
 const PerjalananDinasList = lazy(() => import('./pages/perjalananDinas/PerjalananDinasList'))
+const PerjalananDinasDetail = lazy(() => import('./pages/perjalananDinas/PerjalananDinasDetail'))
 const PerjalananDinasForm = lazy(() => import('./pages/perjalananDinas/PerjalananDinasForm'))
 
 // Settings pages
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const NumberingPage = lazy(() => import('./pages/settings/NumberingPage'))
 const ApiSettingsPage = lazy(() => import('./pages/settings/ApiSettingsPage'))
-
-// Error Boundary Component
-function ErrorBoundary({ children }) {
-  return children
-}
 
 // Page wrapper with suspense
 function PageLoader({ children }) {
@@ -111,7 +114,7 @@ export default function App() {
             path=":id/items"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketItemsPage />
               </PageLoader>
             }
           />
@@ -119,7 +122,7 @@ export default function App() {
             path=":id/survey"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketSurveyPage />
               </PageLoader>
             }
           />
@@ -127,7 +130,7 @@ export default function App() {
             path=":id/dokumen"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketDokumenPage />
               </PageLoader>
             }
           />
@@ -135,7 +138,7 @@ export default function App() {
             path=":id/hps"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketHPSPage />
               </PageLoader>
             }
           />
@@ -143,7 +146,7 @@ export default function App() {
             path=":id/compliance"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketCompliancePage />
               </PageLoader>
             }
           />
@@ -151,7 +154,7 @@ export default function App() {
             path=":id/lampiran"
             element={
               <PageLoader>
-                <PaketDetail />
+                <PaketLampiranPage />
               </PageLoader>
             }
           />
@@ -191,7 +194,7 @@ export default function App() {
             path=":id"
             element={
               <PageLoader>
-                <PerjalananDinasList />
+                <PerjalananDinasDetail />
               </PageLoader>
             }
           />

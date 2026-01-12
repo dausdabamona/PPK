@@ -104,4 +104,7 @@ export function SkeletonTable({ rows = 5, cols = 4 }) {
   )
 }
 
+// Alias for convenience
+export const LoadingSpinner = Spinner
+
 export default Spinner

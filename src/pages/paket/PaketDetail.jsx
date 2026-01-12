@@ -21,9 +21,10 @@ import { SimpleTable } from '../../components/common/DataTable'
 import { WorkflowTimeline } from '../../components/common/Stepper'
 import { LoadingPage } from '../../components/common/Loading'
 import { ErrorState } from '../../components/common/ErrorState'
-import { ConfirmDialog } from '../../components/common/Modal'
+import { Modal, ModalBody, ModalFooter, ConfirmDialog } from '../../components/common/Modal'
 import { EmptyState } from '../../components/common/EmptyState'
-import { formatRupiah, formatTanggal, formatTerbilang } from '../../utils/formatters'
+import { SelectField } from '../../components/common/FormField'
+import { formatRupiah, formatTanggal, formatTerbilang, formatNPWP } from '../../utils/formatters'
 import { STATUS, STATUS_LABELS, WORKFLOW_STAGES, DOKUMEN_PER_TAHAP } from '../../utils/constants'
 import {
   getPaketDetail,
@@ -32,8 +33,10 @@ import {
   revertWorkflow,
   getPaketItems,
   getPaketHPS,
+  updatePaket,
 } from '../../api/paket'
 import { getPaketDokumen } from '../../api/dokumen'
+import { getPenyediaList } from '../../api/penyedia'
 import toast from 'react-hot-toast'
 
 export default function PaketDetail() {
@@ -51,6 +54,13 @@ export default function PaketDetail() {
   const [deleting, setDeleting] = useState(false)
   const [workflowModal, setWorkflowModal] = useState({ open: false, action: null })
   const [workflowLoading, setWorkflowLoading] = useState(false)
+
+  // Penyedia assignment state
+  const [penyediaModal, setPenyediaModal] = useState(false)
+  const [penyediaList, setPenyediaList] = useState([])
+  const [selectedPenyediaId, setSelectedPenyediaId] = useState('')
+  const [penyediaLoading, setPenyediaLoading] = useState(false)
+  const [assigningPenyedia, setAssigningPenyedia] = useState(false)
 
   useEffect(() => {
     fetchPaketData()
@@ -133,6 +143,86 @@ export default function PaketDetail() {
     } finally {
       setWorkflowLoading(false)
       setWorkflowModal({ open: false, action: null })
+    }
+  }
+
+  const openPenyediaModal = async () => {
+    setPenyediaModal(true)
+    setSelectedPenyediaId(paket.penyediaId || '')
+    setPenyediaLoading(true)
+
+    try {
+      const result = await getPenyediaList()
+      if (result.success) {
+        const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        setPenyediaList(data)
+      }
+    } catch (err) {
+      toast.error('Gagal memuat daftar penyedia')
+    } finally {
+      setPenyediaLoading(false)
+    }
+  }
+
+  const handleAssignPenyedia = async () => {
+    if (!selectedPenyediaId) {
+      toast.error('Pilih penyedia terlebih dahulu')
+      return
+    }
+
+    setAssigningPenyedia(true)
+    try {
+      const selectedPenyedia = penyediaList.find(p =>
+        (p.id || p._id || p.penyediaId) === selectedPenyediaId
+      )
+
+      const result = await updatePaket(id, {
+        ...paket,
+        penyediaId: selectedPenyediaId,
+        penyedia: selectedPenyedia ? {
+          id: selectedPenyediaId,
+          nama: selectedPenyedia.nama,
+          npwp: selectedPenyedia.npwp,
+          alamat: selectedPenyedia.alamat,
+          noRekening: selectedPenyedia.noRekening,
+          namaBank: selectedPenyedia.namaBank,
+        } : null,
+      })
+
+      if (result.success) {
+        toast.success('Penyedia berhasil ditetapkan')
+        setPenyediaModal(false)
+        fetchPaketData()
+      } else {
+        toast.error(result.error || 'Gagal menetapkan penyedia')
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan')
+    } finally {
+      setAssigningPenyedia(false)
+    }
+  }
+
+  const handleRemovePenyedia = async () => {
+    setAssigningPenyedia(true)
+    try {
+      const result = await updatePaket(id, {
+        ...paket,
+        penyediaId: null,
+        penyedia: null,
+      })
+
+      if (result.success) {
+        toast.success('Penyedia berhasil dihapus dari paket')
+        setPenyediaModal(false)
+        fetchPaketData()
+      } else {
+        toast.error(result.error || 'Gagal menghapus penyedia')
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan')
+    } finally {
+      setAssigningPenyedia(false)
     }
   }
 
@@ -223,9 +313,19 @@ export default function PaketDetail() {
           </div>
 
           {/* Penyedia info */}
-          {paket.penyedia && (
-            <div className="pt-6 border-t border-slate-200">
-              <h4 className="text-sm font-semibold text-slate-900 mb-4">Informasi Penyedia</h4>
+          <div className="pt-6 border-t border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-slate-900">Informasi Penyedia</h4>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Users}
+                onClick={openPenyediaModal}
+              >
+                {paket.penyedia ? 'Ganti Penyedia' : 'Tetapkan Penyedia'}
+              </Button>
+            </div>
+            {paket.penyedia ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Nama Penyedia</label>
@@ -233,11 +333,36 @@ export default function PaketDetail() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">NPWP</label>
-                  <p className="mt-1 text-slate-900">{paket.penyedia.npwp || '-'}</p>
+                  <p className="mt-1 text-slate-900">{formatNPWP(paket.penyedia.npwp) || '-'}</p>
                 </div>
+                {paket.penyedia.alamat && (
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Alamat</label>
+                    <p className="mt-1 text-slate-900">{paket.penyedia.alamat}</p>
+                  </div>
+                )}
+                {paket.penyedia.noRekening && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">No. Rekening</label>
+                    <p className="mt-1 text-slate-900">{paket.penyedia.noRekening} ({paket.penyedia.namaBank})</p>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-lg text-center">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Belum ada penyedia ditetapkan</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={openPenyediaModal}
+                >
+                  Pilih Penyedia
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       ),
     },
@@ -462,6 +587,87 @@ export default function PaketDetail() {
         confirmText={workflowModal.action === 'next' ? 'Ya, Lanjutkan' : 'Ya, Kembali'}
         loading={workflowLoading}
       />
+
+      {/* Penyedia Assignment Modal */}
+      <Modal
+        open={penyediaModal}
+        onClose={() => setPenyediaModal(false)}
+        title="Tetapkan Penyedia"
+      >
+        <ModalBody>
+          {penyediaLoading ? (
+            <div className="py-8 flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          ) : penyediaList.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 mb-4">Belum ada penyedia terdaftar</p>
+              <Link to="/penyedia">
+                <Button variant="outline">Tambah Penyedia</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <SelectField
+                label="Pilih Penyedia"
+                value={selectedPenyediaId}
+                onChange={(e) => setSelectedPenyediaId(e.target.value)}
+                options={[
+                  { value: '', label: 'Pilih penyedia...' },
+                  ...penyediaList.map(p => ({
+                    value: p.id || p._id || p.penyediaId,
+                    label: `${p.nama} (${p.npwp || 'No NPWP'})`,
+                  })),
+                ]}
+              />
+
+              {selectedPenyediaId && (
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  {(() => {
+                    const selected = penyediaList.find(p =>
+                      (p.id || p._id || p.penyediaId) === selectedPenyediaId
+                    )
+                    if (!selected) return null
+                    return (
+                      <div className="space-y-2 text-sm">
+                        <p><span className="font-medium">Nama:</span> {selected.nama}</p>
+                        <p><span className="font-medium">NPWP:</span> {formatNPWP(selected.npwp) || '-'}</p>
+                        <p><span className="font-medium">Alamat:</span> {selected.alamat || '-'}</p>
+                        {selected.noRekening && (
+                          <p><span className="font-medium">Rekening:</span> {selected.noRekening} ({selected.namaBank})</p>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          {paket.penyedia && (
+            <Button
+              variant="danger"
+              onClick={handleRemovePenyedia}
+              loading={assigningPenyedia}
+              className="mr-auto"
+            >
+              Hapus Penyedia
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => setPenyediaModal(false)}>
+            Batal
+          </Button>
+          <Button
+            onClick={handleAssignPenyedia}
+            loading={assigningPenyedia}
+            disabled={!selectedPenyediaId || penyediaList.length === 0}
+          >
+            Tetapkan
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

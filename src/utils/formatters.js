@@ -224,3 +224,8 @@ export function slugify(text) {
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+/**
+ * Alias for formatTanggalPendek - for convenience
+ */
+export const formatDate = formatTanggalPendek
