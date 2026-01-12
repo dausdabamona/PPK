@@ -602,7 +602,7 @@ export default function PaketKontrakPage() {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <TextField
               label="Nomor Kontrak"
               value={kontrakForm.nomorKontrak}
               onChange={(e) => setKontrakForm({ ...kontrakForm, nomorKontrak: e.target.value })}
@@ -670,7 +670,7 @@ export default function PaketKontrakPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <TextField
               label="Nomor Addendum"
               value={addendumForm.nomorAddendum}
               onChange={(e) => setAddendumForm({ ...addendumForm, nomorAddendum: e.target.value })}
@@ -738,13 +738,13 @@ export default function PaketKontrakPage() {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <TextField
               label="Nomor Jaminan"
               value={jaminanForm.nomorJaminan}
               onChange={(e) => setJaminanForm({ ...jaminanForm, nomorJaminan: e.target.value })}
               required
             />
-            <Input
+            <TextField
               label="Nilai Jaminan"
               type="number"
               value={jaminanForm.nilaiJaminan}

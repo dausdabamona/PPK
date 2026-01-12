@@ -5,9 +5,12 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import './index.css'
 
+// Determine basename for GitHub Pages or local development
+const basename = import.meta.env.BASE_URL || '/'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter basename={basename} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <App />
       <Toaster
         position="top-right"

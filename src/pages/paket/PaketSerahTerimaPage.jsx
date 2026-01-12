@@ -533,7 +533,7 @@ export default function PaketSerahTerimaPage() {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <TextField
               label="Nomor Berita Acara"
               value={serahTerimaForm.nomorBA}
               onChange={(e) => setSerahTerimaForm({ ...serahTerimaForm, nomorBA: e.target.value })}
@@ -548,13 +548,13 @@ export default function PaketSerahTerimaPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            <TextField
               label="Pihak Penyerah"
               value={serahTerimaForm.pihakPenyerah}
               onChange={(e) => setSerahTerimaForm({ ...serahTerimaForm, pihakPenyerah: e.target.value })}
               placeholder="Nama penyedia/rekanan"
             />
-            <Input
+            <TextField
               label="Pihak Penerima"
               value={serahTerimaForm.pihakPenerima}
               onChange={(e) => setSerahTerimaForm({ ...serahTerimaForm, pihakPenerima: e.target.value })}
@@ -609,7 +609,7 @@ export default function PaketSerahTerimaPage() {
           />
 
           {editingItem && (
-            <Select
+            <SelectField
               label="Status"
               value={serahTerimaForm.status}
               onChange={(e) => setSerahTerimaForm({ ...serahTerimaForm, status: e.target.value })}
