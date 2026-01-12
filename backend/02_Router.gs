@@ -189,6 +189,11 @@ function routeRequest(path, method, params, body) {
     return routeReporting(segments.slice(1), method, params, body);
   }
 
+  // ==================== VERSIONING ====================
+  if (segments[0] === 'versioning') {
+    return routeVersioning(segments.slice(1), method, params, body);
+  }
+
   // ==================== SETUP ====================
   if (segments[0] === 'setup') {
     setupAllSheets();
