@@ -152,6 +152,9 @@ export const TINGKAT_BIAYA = [
 // Jenis Biaya Perjalanan Dinas
 export const JENIS_BIAYA_PD = [
   { value: 'TRANSPORT', label: 'Transport' },
+  { value: 'TRANSPORT_LOKAL', label: 'Transport Lokal' },
+  { value: 'TRANSPORT_KEBERANGKATAN', label: 'Transport Keberangkatan' },
+  { value: 'TRANSPORT_KEPULANGAN', label: 'Transport Kepulangan' },
   { value: 'UANG_HARIAN', label: 'Uang Harian' },
   { value: 'PENGINAPAN', label: 'Penginapan' },
   { value: 'UANG_REPRESENTASI', label: 'Uang Representasi' },

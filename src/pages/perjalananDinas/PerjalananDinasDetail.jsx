@@ -27,7 +27,7 @@ import { Modal, ModalBody, ModalFooter, ConfirmDialog } from '../../components/c
 import { EmptyState } from '../../components/common/EmptyState'
 import { TextField, SelectField, MoneyField, TextareaField } from '../../components/common/FormField'
 import { formatRupiah, formatTanggal, formatTanggalPendek } from '../../utils/formatters'
-import { STATUS_PD, STATUS_PD_LABELS, TINGKAT_BIAYA } from '../../utils/constants'
+import { STATUS_PD, STATUS_PD_LABELS, TINGKAT_BIAYA, JENIS_BIAYA_PD, SATUAN } from '../../utils/constants'
 import {
   getPerjalananDinasDetail,
   deletePerjalananDinas,
@@ -48,28 +48,56 @@ const getId = (item) => item?.id || item?._id || item?.pelaksanaId || item?.biay
 
 const WORKFLOW_STAGES_PD = Object.keys(STATUS_PD_LABELS)
 
-const JENIS_BIAYA = [
-  { value: 'uang_harian', label: 'Uang Harian' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'penginapan', label: 'Penginapan' },
-  { value: 'representasi', label: 'Representasi' },
-  { value: 'lainnya', label: 'Lainnya' },
-]
+// Helper to normalize pelaksana data from backend
+const normalizePelaksana = (data) => {
+  return data.map((item, index) => ({
+    ...item,
+    id: getId(item) || `pelaksana-${index}`,
+    nama: item.nama || '',
+    nip: item.nip || '',
+    pangkat: item.pangkat || '',
+    golongan: item.golongan || '',
+    jabatan: item.jabatan || '',
+    instansi: item.instansi || '',
+    tingkatBiaya: item.tingkatBiaya || 'B',
+    uangHarian: parseFloat(item.uangHarian) || 0,
+    isPenanggungJawab: item.isPenanggungJawab === true || item.isPenanggungJawab === 'TRUE' || item.isPenanggungJawab === 'true',
+  }))
+}
+
+// Helper to normalize biaya data from backend
+const normalizeBiaya = (data) => {
+  return data.map((item, index) => ({
+    ...item,
+    id: getId(item) || `biaya-${index}`,
+    jenisBiaya: item.jenisBiaya || 'UANG_HARIAN',
+    keterangan: item.keterangan || '',
+    jumlah: parseFloat(item.jumlah) || 1,
+    satuan: item.satuan || 'OH',
+    hargaSatuan: parseFloat(item.hargaSatuan) || 0,
+    total: parseFloat(item.total) || 0,
+  }))
+}
 
 const initialPelaksanaForm = {
   nama: '',
   nip: '',
-  jabatan: '',
+  pangkat: '',
   golongan: '',
+  jabatan: '',
+  instansi: '',
   tingkatBiaya: 'B',
+  uangHarian: 0,
+  isPenanggungJawab: false,
 }
 
 const initialBiayaForm = {
-  jenisBiaya: 'uang_harian',
+  jenisBiaya: 'UANG_HARIAN',
   keterangan: '',
-  jumlahHari: 1,
-  tarif: 0,
-  jumlah: 0,
+  jumlah: 1,
+  satuan: 'OH',
+  hargaSatuan: 0,
+  total: 0,
 }
 
 export default function PerjalananDinasDetail() {
@@ -133,7 +161,8 @@ export default function PerjalananDinasDetail() {
     try {
       const result = await getPelaksana(id)
       if (result.success) {
-        const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizePelaksana(rawData)
         setPelaksana(data)
       }
     } catch (err) {
@@ -148,7 +177,8 @@ export default function PerjalananDinasDetail() {
     try {
       const result = await getBiaya(id)
       if (result.success) {
-        const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizeBiaya(rawData)
         setBiaya(data)
       }
     } catch (err) {
@@ -206,9 +236,13 @@ export default function PerjalananDinasDetail() {
       setPelaksanaForm({
         nama: item.nama || '',
         nip: item.nip || '',
-        jabatan: item.jabatan || '',
+        pangkat: item.pangkat || '',
         golongan: item.golongan || '',
+        jabatan: item.jabatan || '',
+        instansi: item.instansi || '',
         tingkatBiaya: item.tingkatBiaya || 'B',
+        uangHarian: parseFloat(item.uangHarian) || 0,
+        isPenanggungJawab: item.isPenanggungJawab || false,
       })
     } else {
       setPelaksanaForm(initialPelaksanaForm)
@@ -267,11 +301,12 @@ export default function PerjalananDinasDetail() {
   const openBiayaModal = (item = null) => {
     if (item) {
       setBiayaForm({
-        jenisBiaya: item.jenisBiaya || 'uang_harian',
+        jenisBiaya: item.jenisBiaya || 'UANG_HARIAN',
         keterangan: item.keterangan || '',
-        jumlahHari: item.jumlahHari || 1,
-        tarif: item.tarif || 0,
-        jumlah: item.jumlah || 0,
+        jumlah: parseFloat(item.jumlah) || 1,
+        satuan: item.satuan || 'OH',
+        hargaSatuan: parseFloat(item.hargaSatuan) || 0,
+        total: parseFloat(item.total) || 0,
       })
     } else {
       setBiayaForm(initialBiayaForm)
@@ -280,8 +315,8 @@ export default function PerjalananDinasDetail() {
   }
 
   const handleSaveBiaya = async () => {
-    if (biayaForm.jumlah <= 0) {
-      toast.error('Jumlah biaya harus lebih dari 0')
+    if (biayaForm.total <= 0) {
+      toast.error('Total biaya harus lebih dari 0')
       return
     }
 
@@ -328,7 +363,7 @@ export default function PerjalananDinasDetail() {
 
   // Calculations
   const totalBiaya = useMemo(() => {
-    return biaya.reduce((sum, b) => sum + (b.jumlah || 0), 0)
+    return biaya.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
   }, [biaya])
 
   const jumlahHari = useMemo(() => {
@@ -352,10 +387,31 @@ export default function PerjalananDinasDetail() {
   const canRevert = currentStageIndex > 0 && pd.status !== STATUS_PD.BATAL
 
   const pelaksanaColumns = [
-    { accessorKey: 'nama', header: 'Nama' },
+    {
+      accessorKey: 'nama',
+      header: 'Nama',
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium text-slate-900">{row.original.nama}</p>
+          {row.original.isPenanggungJawab && (
+            <Badge variant="primary" className="mt-1">Penanggung Jawab</Badge>
+          )}
+        </div>
+      ),
+    },
     { accessorKey: 'nip', header: 'NIP', cell: ({ getValue }) => getValue() || '-' },
+    {
+      accessorKey: 'pangkat',
+      header: 'Pangkat/Golongan',
+      cell: ({ row }) => (
+        <div className="text-sm">
+          <p>{row.original.pangkat || '-'}</p>
+          <p className="text-slate-500">{row.original.golongan || ''}</p>
+        </div>
+      ),
+    },
     { accessorKey: 'jabatan', header: 'Jabatan', cell: ({ getValue }) => getValue() || '-' },
-    { accessorKey: 'golongan', header: 'Golongan', cell: ({ getValue }) => getValue() || '-' },
+    { accessorKey: 'instansi', header: 'Instansi', cell: ({ getValue }) => getValue() || '-' },
     {
       accessorKey: 'tingkatBiaya',
       header: 'Tingkat',
@@ -393,16 +449,22 @@ export default function PerjalananDinasDetail() {
       accessorKey: 'jenisBiaya',
       header: 'Jenis Biaya',
       cell: ({ getValue }) => {
-        const jenis = JENIS_BIAYA.find(j => j.value === getValue())
+        const jenis = JENIS_BIAYA_PD.find(j => j.value === getValue())
         return jenis?.label || getValue()
       },
     },
     { accessorKey: 'keterangan', header: 'Keterangan', cell: ({ getValue }) => getValue() || '-' },
-    { accessorKey: 'jumlahHari', header: 'Jumlah Hari', cell: ({ getValue }) => getValue() || '-' },
-    { accessorKey: 'tarif', header: 'Tarif', cell: ({ getValue }) => formatRupiah(getValue() || 0) },
     {
       accessorKey: 'jumlah',
-      header: 'Jumlah',
+      header: 'Volume',
+      cell: ({ row }) => (
+        <span>{row.original.jumlah || 1} {row.original.satuan || ''}</span>
+      ),
+    },
+    { accessorKey: 'hargaSatuan', header: 'Harga Satuan', cell: ({ getValue }) => formatRupiah(getValue() || 0) },
+    {
+      accessorKey: 'total',
+      header: 'Total',
       cell: ({ getValue }) => (
         <span className="font-medium">{formatRupiah(getValue() || 0)}</span>
       ),
@@ -727,24 +789,54 @@ export default function PerjalananDinasDetail() {
           />
           <div className="grid grid-cols-2 gap-4">
             <TextField
+              label="Pangkat"
+              value={pelaksanaForm.pangkat}
+              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, pangkat: e.target.value })}
+              placeholder="Penata Tk.I"
+            />
+            <TextField
+              label="Golongan"
+              value={pelaksanaForm.golongan}
+              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, golongan: e.target.value })}
+              placeholder="III/d"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
               label="Jabatan"
               value={pelaksanaForm.jabatan}
               onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, jabatan: e.target.value })}
               placeholder="Jabatan"
             />
             <TextField
-              label="Golongan"
-              value={pelaksanaForm.golongan}
-              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, golongan: e.target.value })}
-              placeholder="III/a"
+              label="Instansi"
+              value={pelaksanaForm.instansi}
+              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, instansi: e.target.value })}
+              placeholder="Nama instansi"
             />
           </div>
-          <SelectField
-            label="Tingkat Biaya"
-            value={pelaksanaForm.tingkatBiaya}
-            onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, tingkatBiaya: e.target.value })}
-            options={TINGKAT_BIAYA.map(t => ({ value: t.value, label: `${t.value} - ${t.label}` }))}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <SelectField
+              label="Tingkat Biaya"
+              value={pelaksanaForm.tingkatBiaya}
+              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, tingkatBiaya: e.target.value })}
+              options={TINGKAT_BIAYA.map(t => ({ value: t.value, label: `${t.value} - ${t.label}` }))}
+            />
+            <MoneyField
+              label="Uang Harian"
+              value={pelaksanaForm.uangHarian}
+              onChange={(val) => setPelaksanaForm({ ...pelaksanaForm, uangHarian: val })}
+            />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={pelaksanaForm.isPenanggungJawab}
+              onChange={(e) => setPelaksanaForm({ ...pelaksanaForm, isPenanggungJawab: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm text-slate-700">Penanggung Jawab</span>
+          </label>
         </ModalBody>
         <ModalFooter>
           <Button variant="secondary" onClick={() => setPelaksanaModal({ open: false, item: null })}>
@@ -779,7 +871,7 @@ export default function PerjalananDinasDetail() {
             label="Jenis Biaya"
             value={biayaForm.jenisBiaya}
             onChange={(e) => setBiayaForm({ ...biayaForm, jenisBiaya: e.target.value })}
-            options={JENIS_BIAYA}
+            options={JENIS_BIAYA_PD}
           />
           <TextField
             label="Keterangan"
@@ -789,35 +881,42 @@ export default function PerjalananDinasDetail() {
           />
           <div className="grid grid-cols-2 gap-4">
             <TextField
-              label="Jumlah Hari/Unit"
+              label="Volume/Jumlah"
               type="number"
-              value={biayaForm.jumlahHari}
+              value={biayaForm.jumlah}
               onChange={(e) => {
-                const val = parseInt(e.target.value) || 0
+                const val = parseFloat(e.target.value) || 0
                 setBiayaForm({
                   ...biayaForm,
-                  jumlahHari: val,
-                  jumlah: val * biayaForm.tarif,
+                  jumlah: val,
+                  total: val * biayaForm.hargaSatuan,
                 })
               }}
               min="0"
+              step="0.01"
             />
-            <MoneyField
-              label="Tarif"
-              value={biayaForm.tarif}
-              onChange={(val) => {
-                setBiayaForm({
-                  ...biayaForm,
-                  tarif: val,
-                  jumlah: biayaForm.jumlahHari * val,
-                })
-              }}
+            <SelectField
+              label="Satuan"
+              value={biayaForm.satuan}
+              onChange={(e) => setBiayaForm({ ...biayaForm, satuan: e.target.value })}
+              options={SATUAN}
             />
           </div>
           <MoneyField
-            label="Jumlah"
-            value={biayaForm.jumlah}
-            onChange={(val) => setBiayaForm({ ...biayaForm, jumlah: val })}
+            label="Harga Satuan"
+            value={biayaForm.hargaSatuan}
+            onChange={(val) => {
+              setBiayaForm({
+                ...biayaForm,
+                hargaSatuan: val,
+                total: biayaForm.jumlah * val,
+              })
+            }}
+          />
+          <MoneyField
+            label="Total"
+            value={biayaForm.total}
+            onChange={(val) => setBiayaForm({ ...biayaForm, total: val })}
             required
           />
         </ModalBody>
