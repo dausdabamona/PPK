@@ -43,14 +43,43 @@ export default function ApiSettingsPage() {
     setTesting(true)
     setTestResult(null)
 
+    // Create abort controller for timeout (compatible with older browsers)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
+
     try {
+      // Validate URL format first
+      try {
+        new URL(apiUrl)
+      } catch {
+        throw new Error('Format URL tidak valid')
+      }
+
       const testUrl = `${apiUrl}?path=/api/config&data={}`
       const response = await fetch(testUrl, {
         method: 'GET',
-        signal: AbortSignal.timeout(10000),
+        signal: controller.signal,
       })
 
-      const data = await response.json()
+      clearTimeout(timeoutId)
+
+      // Check if response is OK
+      if (!response.ok) {
+        throw new Error(`Server mengembalikan status ${response.status}: ${response.statusText}`)
+      }
+
+      // Try to parse JSON with error handling
+      let data
+      try {
+        const text = await response.text()
+        if (!text || text.trim() === '') {
+          throw new Error('Response kosong dari server')
+        }
+        data = JSON.parse(text)
+      } catch (parseError) {
+        throw new Error('Response bukan format JSON yang valid. Pastikan URL mengarah ke API yang benar.')
+      }
+
       console.log('API Test Response:', data)
 
       if (data.success !== undefined) {
@@ -58,12 +87,24 @@ export default function ApiSettingsPage() {
         toast.success('Koneksi API berhasil!')
       } else {
         setTestResult('error')
-        toast.error('Response tidak valid')
+        toast.error('Response tidak valid: tidak ada field "success"')
       }
     } catch (error) {
+      clearTimeout(timeoutId)
       console.error('API Test Error:', error)
       setTestResult('error')
-      toast.error(`Gagal terhubung: ${error.message}`)
+
+      // Provide more specific error messages
+      let errorMessage = 'Gagal terhubung'
+      if (error.name === 'AbortError') {
+        errorMessage = 'Koneksi timeout setelah 10 detik. Periksa URL dan koneksi internet.'
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        errorMessage = 'Gagal terhubung ke server. Periksa URL dan koneksi internet.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      toast.error(errorMessage)
     } finally {
       setTesting(false)
     }

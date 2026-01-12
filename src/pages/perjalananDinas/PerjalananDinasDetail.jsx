@@ -140,9 +140,13 @@ export default function PerjalananDinasDetail() {
         const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
         const data = normalizePelaksana(rawData)
         setPelaksana(data)
+      } else {
+        toast.error(result.error || 'Gagal memuat data pelaksana')
+        setPelaksana([])
       }
     } catch (err) {
-      // Silently handle error - data will remain empty
+      toast.error('Gagal memuat data pelaksana: ' + (err.message || 'terjadi kesalahan jaringan'))
+      setPelaksana([])
     } finally {
       setLoadingPelaksana(false)
     }
@@ -157,9 +161,13 @@ export default function PerjalananDinasDetail() {
         const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
         const data = normalizeBiaya(rawData)
         setBiaya(data)
+      } else {
+        toast.error(result.error || 'Gagal memuat data biaya')
+        setBiaya([])
       }
     } catch (err) {
-      // Silently handle error - data will remain empty
+      toast.error('Gagal memuat data biaya: ' + (err.message || 'terjadi kesalahan jaringan'))
+      setBiaya([])
     } finally {
       setLoadingBiaya(false)
     }

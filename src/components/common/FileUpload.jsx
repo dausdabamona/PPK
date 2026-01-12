@@ -41,17 +41,45 @@ export function FileUpload({
       return null
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader()
+
       reader.onload = () => {
-        const base64 = reader.result.split(',')[1]
-        resolve({
-          filename: file.name,
-          mimeType: file.type,
-          size: file.size,
-          base64Content: base64,
-        })
+        try {
+          if (!reader.result || typeof reader.result !== 'string') {
+            setError('Gagal membaca file: hasil tidak valid')
+            resolve(null)
+            return
+          }
+          const parts = reader.result.split(',')
+          if (parts.length < 2) {
+            setError('Gagal membaca file: format tidak valid')
+            resolve(null)
+            return
+          }
+          const base64 = parts[1]
+          resolve({
+            filename: file.name,
+            mimeType: file.type,
+            size: file.size,
+            base64Content: base64,
+          })
+        } catch (err) {
+          setError('Gagal memproses file: ' + (err.message || 'terjadi kesalahan'))
+          resolve(null)
+        }
       }
+
+      reader.onerror = () => {
+        setError('Gagal membaca file: ' + (reader.error?.message || 'file tidak dapat dibaca'))
+        resolve(null)
+      }
+
+      reader.onabort = () => {
+        setError('Pembacaan file dibatalkan')
+        resolve(null)
+      }
+
       reader.readAsDataURL(file)
     })
   }

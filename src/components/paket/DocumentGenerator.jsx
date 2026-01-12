@@ -70,12 +70,13 @@ const loadSettingsFromAPI = async () => {
   try {
     const result = await getConfig()
     if (result.success && result.data) {
-      return mapConfigToSettings(result.data)
+      return { settings: mapConfigToSettings(result.data), error: null }
     }
+    return { settings: null, error: result.error || 'Gagal memuat konfigurasi dari server' }
   } catch (e) {
     console.error('Failed to load config from API:', e)
+    return { settings: null, error: e.message || 'Gagal terhubung ke server' }
   }
-  return null
 }
 
 // Save settings to localStorage
@@ -353,10 +354,14 @@ export default function DocumentGenerator({
 
       // If localStorage is empty, try to load from API
       if (!localSettings.namaPPK) {
-        const apiSettings = await loadSettingsFromAPI()
+        const { settings: apiSettings, error } = await loadSettingsFromAPI()
         if (apiSettings && apiSettings.namaPPK) {
           localSettings = { ...localSettings, ...apiSettings }
           saveSettings(localSettings) // Cache to localStorage
+        } else if (error) {
+          // Show warning but continue with local/default settings
+          toast.error('Gagal memuat pengaturan dari server. Menggunakan pengaturan lokal.')
+          console.warn('Failed to load settings from API:', error)
         }
       }
 

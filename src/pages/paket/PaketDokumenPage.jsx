@@ -10,6 +10,7 @@ import { getPaketDetail, getPaketItems, getItemSurveys } from '../../api/paket'
 import { getPenyediaList } from '../../api/penyedia'
 import DocumentGenerator from '../../components/paket/DocumentGenerator'
 import { STATUS_LABELS } from '../../utils/constants'
+import toast from 'react-hot-toast'
 
 export default function PaketDokumenPage() {
   const { id: paketId } = useParams()
@@ -54,17 +55,37 @@ export default function PaketDokumenPage() {
       // Fetch items
       const itemsResult = await getPaketItems(paketId)
       if (itemsResult.success) {
-        setItems(itemsResult.data || [])
+        const itemsData = itemsResult.data || []
+        setItems(itemsData)
 
-        // Fetch surveys for each item
+        // Fetch surveys for each item with error tracking
         const allSurveys = []
-        for (const item of (itemsResult.data || [])) {
-          const surveysResult = await getItemSurveys(item.id)
-          if (surveysResult.success && surveysResult.data) {
-            allSurveys.push(...surveysResult.data.map(s => ({ ...s, itemId: item.id })))
+        const failedItemIds = []
+
+        for (const item of itemsData) {
+          try {
+            const surveysResult = await getItemSurveys(item.id)
+            if (surveysResult.success && surveysResult.data) {
+              allSurveys.push(...surveysResult.data.map(s => ({ ...s, itemId: item.id })))
+            } else if (!surveysResult.success) {
+              failedItemIds.push(item.namaBarang || item.id)
+            }
+          } catch (err) {
+            failedItemIds.push(item.namaBarang || item.id)
           }
         }
         setSurveyData(allSurveys)
+
+        // Notify user if some surveys failed to load
+        if (failedItemIds.length > 0) {
+          console.warn('Failed to load surveys for items:', failedItemIds)
+          // Only show warning if we have items but some failed
+          if (itemsData.length > 0) {
+            toast.error(`Gagal memuat survey untuk ${failedItemIds.length} dari ${itemsData.length} item`)
+          }
+        }
+      } else {
+        console.warn('Failed to load items:', itemsResult.error)
       }
     } catch (err) {
       console.error('Error fetching data:', err)

@@ -51,20 +51,38 @@ export default function PaketHPSPage() {
         const data = Array.isArray(itemsResult.data) ? itemsResult.data : itemsResult.data?.items || []
         setItems(data)
 
-        // Fetch surveys for all items
-        const surveyPromises = data.map(item =>
-          getItemSurveys(getId(item)).then(result => ({
-            itemId: getId(item),
-            surveys: result.success ? (Array.isArray(result.data) ? result.data : result.data?.surveys || []) : []
-          }))
-        )
+        // Fetch surveys for all items with individual error handling
+        const surveyPromises = data.map(item => {
+          const itemId = getId(item)
+          return getItemSurveys(itemId)
+            .then(result => ({
+              itemId,
+              surveys: result.success ? (Array.isArray(result.data) ? result.data : result.data?.surveys || []) : [],
+              error: result.success ? null : (result.error || 'Gagal memuat survey')
+            }))
+            .catch(err => ({
+              itemId,
+              surveys: [],
+              error: err.message || 'Gagal memuat survey'
+            }))
+        })
 
         const surveyResults = await Promise.all(surveyPromises)
         const surveyMap = {}
-        surveyResults.forEach(({ itemId, surveys }) => {
+        const failedItems = []
+
+        surveyResults.forEach(({ itemId, surveys, error }) => {
           surveyMap[itemId] = surveys
+          if (error) {
+            failedItems.push(itemId)
+          }
         })
         setSurveys(surveyMap)
+
+        // Notify user if some surveys failed to load
+        if (failedItems.length > 0) {
+          toast.error(`Gagal memuat survey untuk ${failedItems.length} item. Data HPS mungkin tidak lengkap.`)
+        }
       }
 
       if (hpsResult.success) {
