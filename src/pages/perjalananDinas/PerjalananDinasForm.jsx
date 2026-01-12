@@ -66,16 +66,17 @@ export default function PerjalananDinasForm() {
 
       if (result.success) {
         const data = result.data
+        // Map backend field names to frontend field names
         reset({
-          nomorSuratTugas: data.nomorSuratTugas || '',
-          tanggalSuratTugas: data.tanggalSuratTugas || '',
-          tujuanDinas: data.tujuanDinas || '',
+          nomorSuratTugas: data.nomorSuratTugas || data.nomorST || '',
+          tanggalSuratTugas: data.tanggalSuratTugas || data.tanggalST || '',
+          tujuanDinas: data.tujuanDinas || data.maksudTujuan || data.tujuan || '',
           kotaTujuan: data.kotaTujuan || '',
           tanggalBerangkat: data.tanggalBerangkat || '',
           tanggalKembali: data.tanggalKembali || '',
           tingkatBiaya: data.tingkatBiaya || '',
-          sumberDana: data.sumberDana || '',
-          mak: data.mak || '',
+          sumberDana: data.sumberDana || data.instansiPembebanan || '',
+          mak: data.mak || data.akun || '',
           keterangan: data.keterangan || '',
         })
       } else {
@@ -91,10 +92,21 @@ export default function PerjalananDinasForm() {
   const onSubmit = async (data) => {
     setSubmitting(true)
 
+    // Map frontend field names to backend field names
+    const payload = {
+      ...data,
+      nomorST: data.nomorSuratTugas,
+      tanggalST: data.tanggalSuratTugas,
+      maksudTujuan: data.tujuanDinas,
+      tujuan: data.tujuanDinas,
+      akun: data.mak,
+      instansiPembebanan: data.sumberDana,
+    }
+
     try {
       const result = isEdit
-        ? await updatePerjalananDinas(id, data)
-        : await createPerjalananDinas(data)
+        ? await updatePerjalananDinas(id, payload)
+        : await createPerjalananDinas(payload)
 
       if (result.success) {
         toast.success(isEdit ? 'Perjalanan dinas berhasil diperbarui' : 'Perjalanan dinas berhasil dibuat')

@@ -511,7 +511,7 @@ export default function PerjalananDinasDetail() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Tujuan Dinas</label>
-                <p className="mt-1 text-slate-900">{pd.tujuanDinas}</p>
+                <p className="mt-1 text-slate-900">{pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kota Tujuan</label>
@@ -528,15 +528,15 @@ export default function PerjalananDinasDetail() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">No. Surat Tugas</label>
-                <p className="mt-1 text-slate-900 font-mono">{pd.nomorSuratTugas || '-'}</p>
+                <p className="mt-1 text-slate-900 font-mono">{pd.nomorSuratTugas || pd.nomorST || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Tanggal Surat</label>
-                <p className="mt-1 text-slate-900">{formatTanggal(pd.tanggalSuratTugas) || '-'}</p>
+                <p className="mt-1 text-slate-900">{formatTanggal(pd.tanggalSuratTugas || pd.tanggalST) || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">MAK</label>
-                <p className="mt-1 text-slate-900">{pd.mak || '-'}</p>
+                <p className="mt-1 text-slate-900">{pd.mak || pd.akun || '-'}</p>
               </div>
             </div>
           </div>
@@ -649,7 +649,7 @@ export default function PerjalananDinasDetail() {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">{pd.tujuanDinas}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}</h1>
             <StatusBadge status={pd.status} type="pd" />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
@@ -754,7 +754,7 @@ export default function PerjalananDinasDetail() {
         onClose={() => setDeleteModal(false)}
         onConfirm={handleDelete}
         title="Hapus Perjalanan Dinas"
-        message={`Apakah Anda yakin ingin menghapus perjalanan dinas "${pd.tujuanDinas}"? Semua data pelaksana dan biaya akan ikut terhapus.`}
+        message={`Apakah Anda yakin ingin menghapus perjalanan dinas "${pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}"? Semua data pelaksana dan biaya akan ikut terhapus.`}
         type="danger"
         confirmText="Ya, Hapus"
         loading={deleting}
