@@ -170,6 +170,25 @@ function routeRequest(path, method, params, body) {
     return routeNumbering(segments.slice(1), method, params, body);
   }
 
+  // ==================== WORKFLOW EXTENDED ====================
+  if (segments[0] === 'workflow') {
+    return routeWorkflowExtended(segments.slice(1), method, params, body);
+  }
+
+  // ==================== COMPLIANCE ====================
+  if (segments[0] === 'compliance') {
+    const paketId = segments[1];
+    if (method === 'GET' && paketId) {
+      return ComplianceService.check(paketId);
+    }
+    return { success: false, error: 'Compliance route requires paket ID' };
+  }
+
+  // ==================== REPORTING ====================
+  if (segments[0] === 'reporting') {
+    return routeReporting(segments.slice(1), method, params, body);
+  }
+
   // ==================== SETUP ====================
   if (segments[0] === 'setup') {
     setupAllSheets();
@@ -181,6 +200,7 @@ function routeRequest(path, method, params, body) {
     return {
       success: true,
       message: 'PPK API is running',
+      version: '1.0.0',
       timestamp: new Date().toISOString()
     };
   }
