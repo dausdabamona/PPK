@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Printer, Download, FileText, Settings, Eye } from 'lucide-react'
+import { X, Printer, Download, FileText, Settings, Eye, ExternalLink, RefreshCw } from 'lucide-react'
 import { Button } from '../common/Button'
 import { Modal } from '../common/Modal'
 import { TextField, TextareaField } from '../common/FormField'
+import { Badge } from '../common/Badge'
 import { getDocumentStyles, DOCUMENT_GENERATORS, getRequiredDocuments } from '../../utils/documentTemplates'
+import { getConfig } from '../../api/config'
 import toast from 'react-hot-toast'
 
 // Default PPK settings - can be customized per user/organization
@@ -23,7 +25,34 @@ const DEFAULT_SETTINGS = {
   nipAnggota2: '',
 }
 
-// Load settings from localStorage
+// Map config keys to settings object
+const mapConfigToSettings = (configData) => {
+  const settings = { ...DEFAULT_SETTINGS }
+
+  if (Array.isArray(configData)) {
+    // Config is array of {key, value} objects
+    configData.forEach(item => {
+      switch (item.key) {
+        case 'ppk_nama': settings.namaPPK = item.value || ''; break
+        case 'ppk_nip': settings.nipPPK = item.value || ''; break
+        case 'satker_nama': settings.satuanKerja = item.value || ''; break
+        case 'satker_alamat': settings.alamatKantor = item.value || ''; break
+        case 'satker_kota': settings.tempatTTD = item.value || ''; break
+      }
+    })
+  } else if (configData && typeof configData === 'object') {
+    // Config might be a single object with keys
+    settings.namaPPK = configData.ppk_nama || configData.namaPPK || ''
+    settings.nipPPK = configData.ppk_nip || configData.nipPPK || ''
+    settings.satuanKerja = configData.satker_nama || configData.satuanKerja || ''
+    settings.alamatKantor = configData.satker_alamat || configData.alamatKantor || ''
+    settings.tempatTTD = configData.satker_kota || configData.tempatTTD || ''
+  }
+
+  return settings
+}
+
+// Load settings from localStorage, with fallback to defaults
 const loadSettings = () => {
   try {
     const saved = localStorage.getItem('ppk_document_settings')
@@ -34,6 +63,19 @@ const loadSettings = () => {
     console.error('Failed to load settings:', e)
   }
   return DEFAULT_SETTINGS
+}
+
+// Load settings from API config
+const loadSettingsFromAPI = async () => {
+  try {
+    const result = await getConfig()
+    if (result.success && result.data) {
+      return mapConfigToSettings(result.data)
+    }
+  } catch (e) {
+    console.error('Failed to load config from API:', e)
+  }
+  return null
 }
 
 // Save settings to localStorage
@@ -300,6 +342,30 @@ export default function DocumentGenerator({
   const [showSettings, setShowSettings] = useState(false)
   const [previewDoc, setPreviewDoc] = useState(null)
   const [generating, setGenerating] = useState(null)
+  const [loadingSettings, setLoadingSettings] = useState(true)
+
+  // Load settings from API on mount
+  useEffect(() => {
+    const initSettings = async () => {
+      setLoadingSettings(true)
+      // First try to load from localStorage
+      let localSettings = loadSettings()
+
+      // If localStorage is empty, try to load from API
+      if (!localSettings.namaPPK) {
+        const apiSettings = await loadSettingsFromAPI()
+        if (apiSettings && apiSettings.namaPPK) {
+          localSettings = { ...localSettings, ...apiSettings }
+          saveSettings(localSettings) // Cache to localStorage
+        }
+      }
+
+      setSettings(localSettings)
+      setLoadingSettings(false)
+    }
+
+    initSettings()
+  }, [])
 
   // Get required documents for current stage
   const requiredDocs = getRequiredDocuments(paket?.status)
