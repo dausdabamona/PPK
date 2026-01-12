@@ -95,6 +95,7 @@ export default function PerjalananDinasForm() {
     // Map frontend field names to backend field names
     const payload = {
       ...data,
+      // Backend uses different field names
       nomorST: data.nomorSuratTugas,
       tanggalST: data.tanggalSuratTugas,
       maksudTujuan: data.tujuanDinas,
@@ -102,6 +103,10 @@ export default function PerjalananDinasForm() {
       akun: data.mak,
       instansiPembebanan: data.sumberDana,
     }
+
+    // Debug: log what's being sent
+    console.log('Form data:', data)
+    console.log('Payload to backend:', payload)
 
     try {
       const result = isEdit
@@ -174,7 +179,7 @@ export default function PerjalananDinasForm() {
                     label="Tanggal Surat Tugas"
                     error={errors.tanggalSuratTugas?.message}
                     value={field.value}
-                    onChange={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                    onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                   />
                 )}
               />
@@ -208,7 +213,7 @@ export default function PerjalananDinasForm() {
                     error={errors.tanggalBerangkat?.message}
                     required
                     value={field.value}
-                    onChange={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                    onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                   />
                 )}
               />
@@ -222,7 +227,7 @@ export default function PerjalananDinasForm() {
                     error={errors.tanggalKembali?.message}
                     required
                     value={field.value}
-                    onChange={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                    onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                   />
                 )}
               />
