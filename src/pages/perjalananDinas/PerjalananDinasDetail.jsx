@@ -922,7 +922,7 @@ export default function PerjalananDinasDetail() {
       </Card>
 
       {/* Summary Card */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardBody>
             <p className="text-sm text-slate-500">Jumlah Pelaksana</p>
@@ -939,6 +939,21 @@ export default function PerjalananDinasDetail() {
           <CardBody>
             <p className="text-sm text-primary-600">Total Biaya</p>
             <p className="text-2xl font-bold text-primary-700">{formatRupiah(pd.totalBiaya || totalBiaya)}</p>
+          </CardBody>
+        </Card>
+        <Card className="bg-green-50 border-green-200">
+          <CardBody className="flex flex-col justify-center h-full">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={FileText}
+              onClick={() => handleGenerateDocument('kuitansi_rampung')}
+              className="w-full bg-green-600 hover:bg-green-700"
+              disabled={pelaksana.length === 0 || biaya.length === 0}
+            >
+              Generate Kuitansi
+            </Button>
+            <p className="text-xs text-green-600 mt-2 text-center">Kuitansi Rampung</p>
           </CardBody>
         </Card>
       </div>
