@@ -1,6 +1,31 @@
 import toast from 'react-hot-toast'
 
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzamm-mkpQg8yV3tPlhpse4RU-l7VECNX04EJsA9mhlVbGLNI6RplVp13lSqpXiHPPl7A/exec'
+const DEFAULT_API_BASE = 'https://script.google.com/macros/s/AKfycbzamm-mkpQg8yV3tPlhpse4RU-l7VECNX04EJsA9mhlVbGLNI6RplVp13lSqpXiHPPl7A/exec'
+
+// Get API URL from localStorage or use default
+const getApiBase = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('ppk_api_url') || DEFAULT_API_BASE
+  }
+  return DEFAULT_API_BASE
+}
+
+// Set custom API URL
+export const setApiUrl = (url) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('ppk_api_url', url)
+  }
+}
+
+// Get current API URL
+export const getApiUrl = () => getApiBase()
+
+// Reset to default API URL
+export const resetApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('ppk_api_url')
+  }
+}
 
 // Request timeout in milliseconds
 const REQUEST_TIMEOUT = 30000
@@ -42,12 +67,12 @@ async function apiCall(method, path, data = {}, options = {}) {
           path,
           data: JSON.stringify(data),
         })
-        response = await fetch(`${API_BASE}?${params}`, {
+        response = await fetch(`${getApiBase()}?${params}`, {
           method: 'GET',
           signal: controller.signal,
         })
       } else {
-        response = await fetch(API_BASE, {
+        response = await fetch(getApiBase(), {
           method: 'POST',
           headers: {
             'Content-Type': 'text/plain', // GAS requirement

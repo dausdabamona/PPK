@@ -8,9 +8,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Calculator,
-  FolderCheck,
   Hash,
+  Server,
   X,
 } from 'lucide-react'
 import { useStore } from '../../store'
@@ -26,6 +25,7 @@ const navigation = [
 const settingsNav = [
   { name: 'Konfigurasi', href: '/settings', icon: Settings },
   { name: 'Penomoran', href: '/settings/numbering', icon: Hash },
+  { name: 'API', href: '/settings/api', icon: Server },
 ]
 
 export default function Sidebar() {

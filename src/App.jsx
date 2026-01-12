@@ -21,6 +21,7 @@ const PerjalananDinasForm = lazy(() => import('./pages/perjalananDinas/Perjalana
 // Settings pages
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const NumberingPage = lazy(() => import('./pages/settings/NumberingPage'))
+const ApiSettingsPage = lazy(() => import('./pages/settings/ApiSettingsPage'))
 
 // Error Boundary Component
 function ErrorBoundary({ children }) {
@@ -222,6 +223,14 @@ export default function App() {
             element={
               <PageLoader>
                 <NumberingPage />
+              </PageLoader>
+            }
+          />
+          <Route
+            path="api"
+            element={
+              <PageLoader>
+                <ApiSettingsPage />
               </PageLoader>
             }
           />

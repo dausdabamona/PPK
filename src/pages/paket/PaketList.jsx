@@ -15,6 +15,9 @@ import { getPaketList, deletePaket } from '../../api/paket'
 import { usePaketStore } from '../../store'
 import toast from 'react-hot-toast'
 
+// Helper to get ID from various possible field names
+const getId = (item) => item?.id || item?._id || item?.paketId || item?.rowId || item?.ID || null
+
 export default function PaketList() {
   const navigate = useNavigate()
   const { paketList, setPaketList, paketLoading, setPaketLoading, filters, setFilters, resetFilters } = usePaketStore()
@@ -36,6 +39,9 @@ export default function PaketList() {
 
       if (result.success) {
         const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        console.log('API Response - Paket List:', result.data) // Debug log
+        console.log('Parsed data:', data) // Debug log
+        if (data.length > 0) console.log('Sample item structure:', data[0]) // Debug log
         setPaketList(data)
       } else {
         setError(result.error || 'Gagal memuat data paket')
@@ -52,7 +58,7 @@ export default function PaketList() {
 
     setDeleting(true)
     try {
-      const result = await deletePaket(deleteModal.paket.id)
+      const result = await deletePaket(getId(deleteModal.paket))
 
       if (result.success) {
         toast.success('Paket berhasil dihapus')
@@ -143,7 +149,7 @@ export default function PaketList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/paket/${row.original.id}`)
+              navigate(`/paket/${getId(row.original)}`)
             }}
             title="Lihat Detail"
           />
@@ -153,7 +159,7 @@ export default function PaketList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/paket/${row.original.id}/edit`)
+              navigate(`/paket/${getId(row.original)}/edit`)
             }}
             title="Edit"
           />
@@ -265,7 +271,7 @@ export default function PaketList() {
               data={filteredData}
               loading={paketLoading}
               searchable={false}
-              onRowClick={(row) => navigate(`/paket/${row.id}`)}
+              onRowClick={(row) => navigate(`/paket/${getId(row)}`)}
               emptyMessage="Tidak ada paket yang sesuai filter"
             />
           </CardBody>
