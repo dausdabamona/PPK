@@ -125,9 +125,11 @@ export async function addItemSurvey(itemId, data) {
 
 /**
  * Delete survey
+ * @param {string} itemId - The item ID the survey belongs to
+ * @param {string} surveyId - The survey ID to delete
  */
-export async function deleteSurvey(surveyId) {
-  return del(`/api/surveys/${surveyId}`)
+export async function deleteSurvey(itemId, surveyId) {
+  return del(`/api/items/${itemId}/surveys/${surveyId}`)
 }
 
 // ==================== HPS ====================
