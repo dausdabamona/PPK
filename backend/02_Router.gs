@@ -25,7 +25,7 @@ function handleRequest(e, method) {
     return createCorsResponse();
   }
 
-  const path = e.parameter.path || e.pathInfo || '';
+  let path = e.parameter.path || e.pathInfo || '';
   const params = e.parameter || {};
 
   // Check for method override (for DELETE via POST)
@@ -34,15 +34,36 @@ function handleRequest(e, method) {
   }
 
   let body = {};
+  let requestData = {};
+
   if (e.postData) {
     try {
-      body = JSON.parse(e.postData.contents);
-      // Check for method override in body
+      const parsed = JSON.parse(e.postData.contents);
+
+      // Handle client format: { path: "...", data: {...} }
+      if (parsed.path && typeof parsed.path === 'string') {
+        // Use body.path if path is empty (for POST requests)
+        if (!path) {
+          path = parsed.path;
+        }
+        // Extract the actual data
+        requestData = parsed.data || {};
+        body = requestData;
+      } else {
+        // Legacy format: body is the data directly
+        body = parsed;
+        requestData = parsed;
+      }
+
+      // Check for method override in body or data
       if (body._method) {
         method = body._method.toUpperCase();
+      } else if (requestData._method) {
+        method = requestData._method.toUpperCase();
       }
     } catch (err) {
       body = {};
+      requestData = {};
     }
   }
 
@@ -194,7 +215,13 @@ function routeRequest(path, method, params, body) {
     if (segments[1] === 'workflow') {
       return runAllWorkflowTests();
     }
-    return { success: false, error: 'Unknown test suite' };
+    if (segments[1] === 'pd') {
+      return runAllPDTests();
+    }
+    if (segments[1] === 'pd-full') {
+      return runFullPDTests();
+    }
+    return { success: false, error: 'Unknown test suite. Available: workflow, pd, pd-full' };
   }
 
   // ==================== REPORTING ====================
@@ -290,23 +317,63 @@ function routePerjalananDinas(segments, method, params, body) {
 
   // ========== PELAKSANA ==========
   if (segments[1] === 'pelaksana') {
-    if (method === 'GET') {
+    const pelaksanaId = segments[2];
+
+    // GET /perjalanan-dinas/:id/pelaksana - List pelaksana
+    if (!pelaksanaId && method === 'GET') {
       return { success: true, data: PerjalananDinasService.getPelaksana(pdId) };
     }
-    if (method === 'POST') {
+
+    // POST /perjalanan-dinas/:id/pelaksana - Add pelaksana
+    if (!pelaksanaId && method === 'POST') {
       const result = PerjalananDinasService.addPelaksana(pdId, body);
       return { success: true, data: result };
+    }
+
+    // PUT/POST /perjalanan-dinas/:id/pelaksana/:pelaksanaId - Update pelaksana
+    if (pelaksanaId && (method === 'POST' || method === 'PUT')) {
+      const result = PerjalananDinasService.updatePelaksana(pelaksanaId, body);
+      if (!result) {
+        return { success: false, error: 'Pelaksana tidak ditemukan' };
+      }
+      return { success: true, data: result };
+    }
+
+    // DELETE /perjalanan-dinas/:id/pelaksana/:pelaksanaId - Delete pelaksana
+    if (pelaksanaId && method === 'DELETE') {
+      const success = PerjalananDinasService.deletePelaksana(pelaksanaId);
+      return { success };
     }
   }
 
   // ========== BIAYA ==========
   if (segments[1] === 'biaya') {
-    if (method === 'GET') {
+    const biayaId = segments[2];
+
+    // GET /perjalanan-dinas/:id/biaya - List biaya
+    if (!biayaId && method === 'GET') {
       return { success: true, data: PerjalananDinasService.getBiaya(pdId) };
     }
-    if (method === 'POST') {
+
+    // POST /perjalanan-dinas/:id/biaya - Add biaya
+    if (!biayaId && method === 'POST') {
       const result = PerjalananDinasService.addBiaya(pdId, body);
       return { success: true, data: result };
+    }
+
+    // PUT/POST /perjalanan-dinas/:id/biaya/:biayaId - Update biaya
+    if (biayaId && (method === 'POST' || method === 'PUT')) {
+      const result = PerjalananDinasService.updateBiaya(biayaId, body);
+      if (!result) {
+        return { success: false, error: 'Biaya tidak ditemukan' };
+      }
+      return { success: true, data: result };
+    }
+
+    // DELETE /perjalanan-dinas/:id/biaya/:biayaId - Delete biaya
+    if (biayaId && method === 'DELETE') {
+      const success = PerjalananDinasService.deleteBiaya(biayaId);
+      return { success };
     }
   }
 
