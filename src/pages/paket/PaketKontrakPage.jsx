@@ -611,7 +611,7 @@ export default function PaketKontrakPage() {
             <DateField
               label="Tanggal Kontrak"
               value={kontrakForm.tanggalKontrak}
-              onChange={(e) => setKontrakForm({ ...kontrakForm, tanggalKontrak: e.target.value })}
+              onChange={(date) => setKontrakForm({ ...kontrakForm, tanggalKontrak: date ? date.toISOString().split('T')[0] : '' })}
               required
             />
           </div>
@@ -635,12 +635,12 @@ export default function PaketKontrakPage() {
             <DateField
               label="Tanggal Mulai"
               value={kontrakForm.tanggalMulai}
-              onChange={(e) => setKontrakForm({ ...kontrakForm, tanggalMulai: e.target.value })}
+              onChange={(date) => setKontrakForm({ ...kontrakForm, tanggalMulai: date ? date.toISOString().split('T')[0] : '' })}
             />
             <DateField
               label="Tanggal Selesai"
               value={kontrakForm.tanggalSelesai}
-              onChange={(e) => setKontrakForm({ ...kontrakForm, tanggalSelesai: e.target.value })}
+              onChange={(date) => setKontrakForm({ ...kontrakForm, tanggalSelesai: date ? date.toISOString().split('T')[0] : '' })}
             />
           </div>
 
@@ -679,7 +679,7 @@ export default function PaketKontrakPage() {
             <DateField
               label="Tanggal Addendum"
               value={addendumForm.tanggalAddendum}
-              onChange={(e) => setAddendumForm({ ...addendumForm, tanggalAddendum: e.target.value })}
+              onChange={(date) => setAddendumForm({ ...addendumForm, tanggalAddendum: date ? date.toISOString().split('T')[0] : '' })}
               required
             />
           </div>
@@ -757,12 +757,12 @@ export default function PaketKontrakPage() {
             <DateField
               label="Tanggal Mulai"
               value={jaminanForm.tanggalMulai}
-              onChange={(e) => setJaminanForm({ ...jaminanForm, tanggalMulai: e.target.value })}
+              onChange={(date) => setJaminanForm({ ...jaminanForm, tanggalMulai: date ? date.toISOString().split('T')[0] : '' })}
             />
             <DateField
               label="Tanggal Berakhir"
               value={jaminanForm.tanggalBerakhir}
-              onChange={(e) => setJaminanForm({ ...jaminanForm, tanggalBerakhir: e.target.value })}
+              onChange={(date) => setJaminanForm({ ...jaminanForm, tanggalBerakhir: date ? date.toISOString().split('T')[0] : '' })}
             />
           </div>
 

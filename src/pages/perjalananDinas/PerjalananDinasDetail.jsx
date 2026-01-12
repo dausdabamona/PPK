@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -131,11 +131,43 @@ export default function PerjalananDinasDetail() {
   const [deleteBiayaModal, setDeleteBiayaModal] = useState({ open: false, item: null })
   const [deletingBiaya, setDeletingBiaya] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, [id])
+  const fetchPelaksana = useCallback(async (pdId) => {
+    if (!pdId) return
+    setLoadingPelaksana(true)
+    try {
+      const result = await getPelaksana(pdId)
+      if (result.success) {
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizePelaksana(rawData)
+        setPelaksana(data)
+      }
+    } catch (err) {
+      // Silently handle error - data will remain empty
+    } finally {
+      setLoadingPelaksana(false)
+    }
+  }, [])
 
-  const fetchData = async () => {
+  const fetchBiaya = useCallback(async (pdId) => {
+    if (!pdId) return
+    setLoadingBiaya(true)
+    try {
+      const result = await getBiaya(pdId)
+      if (result.success) {
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
+        const data = normalizeBiaya(rawData)
+        setBiaya(data)
+      }
+    } catch (err) {
+      // Silently handle error - data will remain empty
+    } finally {
+      setLoadingBiaya(false)
+    }
+  }, [])
+
+  const fetchData = useCallback(async () => {
+    if (!id) return
+
     setLoading(true)
     setError(null)
 
@@ -143,9 +175,11 @@ export default function PerjalananDinasDetail() {
       const result = await getPerjalananDinasDetail(id)
       if (result.success) {
         setPd(result.data)
-        // Fetch pelaksana and biaya
-        fetchPelaksana()
-        fetchBiaya()
+        // Fetch pelaksana and biaya in parallel with the same ID
+        await Promise.all([
+          fetchPelaksana(id),
+          fetchBiaya(id)
+        ])
       } else {
         setError(result.error || 'Gagal memuat data perjalanan dinas')
       }
@@ -154,39 +188,11 @@ export default function PerjalananDinasDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, fetchPelaksana, fetchBiaya])
 
-  const fetchPelaksana = async () => {
-    setLoadingPelaksana(true)
-    try {
-      const result = await getPelaksana(id)
-      if (result.success) {
-        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
-        const data = normalizePelaksana(rawData)
-        setPelaksana(data)
-      }
-    } catch (err) {
-      console.error('Error fetching pelaksana:', err)
-    } finally {
-      setLoadingPelaksana(false)
-    }
-  }
-
-  const fetchBiaya = async () => {
-    setLoadingBiaya(true)
-    try {
-      const result = await getBiaya(id)
-      if (result.success) {
-        const rawData = Array.isArray(result.data) ? result.data : result.data?.items || []
-        const data = normalizeBiaya(rawData)
-        setBiaya(data)
-      }
-    } catch (err) {
-      console.error('Error fetching biaya:', err)
-    } finally {
-      setLoadingBiaya(false)
-    }
-  }
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -266,7 +272,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success(isEdit ? 'Pelaksana berhasil diperbarui' : 'Pelaksana berhasil ditambahkan')
         setPelaksanaModal({ open: false, item: null })
-        fetchPelaksana()
+        fetchPelaksana(id)
       } else {
         toast.error(result.error || 'Gagal menyimpan pelaksana')
       }
@@ -286,7 +292,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success('Pelaksana berhasil dihapus')
         setDeletePelaksanaModal({ open: false, item: null })
-        fetchPelaksana()
+        fetchPelaksana(id)
       } else {
         toast.error(result.error || 'Gagal menghapus pelaksana')
       }
@@ -330,7 +336,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success(isEdit ? 'Biaya berhasil diperbarui' : 'Biaya berhasil ditambahkan')
         setBiayaModal({ open: false, item: null })
-        fetchBiaya()
+        fetchBiaya(id)
       } else {
         toast.error(result.error || 'Gagal menyimpan biaya')
       }
@@ -350,7 +356,7 @@ export default function PerjalananDinasDetail() {
       if (result.success) {
         toast.success('Biaya berhasil dihapus')
         setDeleteBiayaModal({ open: false, item: null })
-        fetchBiaya()
+        fetchBiaya(id)
       } else {
         toast.error(result.error || 'Gagal menghapus biaya')
       }
@@ -505,7 +511,7 @@ export default function PerjalananDinasDetail() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Tujuan Dinas</label>
-                <p className="mt-1 text-slate-900">{pd.tujuanDinas}</p>
+                <p className="mt-1 text-slate-900">{pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kota Tujuan</label>
@@ -522,15 +528,15 @@ export default function PerjalananDinasDetail() {
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">No. Surat Tugas</label>
-                <p className="mt-1 text-slate-900 font-mono">{pd.nomorSuratTugas || '-'}</p>
+                <p className="mt-1 text-slate-900 font-mono">{pd.nomorSuratTugas || pd.nomorST || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Tanggal Surat</label>
-                <p className="mt-1 text-slate-900">{formatTanggal(pd.tanggalSuratTugas) || '-'}</p>
+                <p className="mt-1 text-slate-900">{formatTanggal(pd.tanggalSuratTugas || pd.tanggalST) || '-'}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">MAK</label>
-                <p className="mt-1 text-slate-900">{pd.mak || '-'}</p>
+                <p className="mt-1 text-slate-900">{pd.mak || pd.akun || '-'}</p>
               </div>
             </div>
           </div>
@@ -643,7 +649,7 @@ export default function PerjalananDinasDetail() {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">{pd.tujuanDinas}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}</h1>
             <StatusBadge status={pd.status} type="pd" />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
@@ -663,6 +669,9 @@ export default function PerjalananDinasDetail() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link to={`/perjalanan-dinas/${id}/dokumen`}>
+            <Button variant="outline" icon={FileText}>Dokumen</Button>
+          </Link>
           <Link to={`/perjalanan-dinas/${id}/edit`}>
             <Button variant="outline" icon={Edit}>Edit</Button>
           </Link>
@@ -745,7 +754,7 @@ export default function PerjalananDinasDetail() {
         onClose={() => setDeleteModal(false)}
         onConfirm={handleDelete}
         title="Hapus Perjalanan Dinas"
-        message={`Apakah Anda yakin ingin menghapus perjalanan dinas "${pd.tujuanDinas}"? Semua data pelaksana dan biaya akan ikut terhapus.`}
+        message={`Apakah Anda yakin ingin menghapus perjalanan dinas "${pd.tujuanDinas || pd.maksudTujuan || pd.tujuan}"? Semua data pelaksana dan biaya akan ikut terhapus.`}
         type="danger"
         confirmText="Ya, Hapus"
         loading={deleting}

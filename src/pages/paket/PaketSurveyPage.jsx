@@ -13,7 +13,20 @@ import { formatRupiah, formatDate } from '../../utils/formatters'
 import { getPaketDetail, getPaketItems, getItemSurveys, addItemSurvey, deleteSurvey } from '../../api/paket'
 import toast from 'react-hot-toast'
 
-const getId = (item) => item?.id || item?._id || item?.itemId || item?.rowId || item?.ID || null
+const getId = (item) => item?.id || item?._id || item?.itemId || item?.surveyId || item?.rowId || item?.ID || null
+
+// Normalize survey data from API (handle different field names)
+const normalizeSurvey = (survey, index) => ({
+  ...survey,
+  id: getId(survey) || `survey-${index}`,
+  namaToko: survey.namaToko || survey.nama_toko || survey.sumber || survey.namaSupplier || survey.toko || '',
+  alamatToko: survey.alamatToko || survey.alamat_toko || survey.alamat || '',
+  kontakToko: survey.kontakToko || survey.kontak_toko || survey.kontak || survey.telepon || '',
+  harga: parseFloat(survey.harga) || 0,
+  tanggalSurvey: survey.tanggalSurvey || survey.tanggal_survey || survey.tanggal || '',
+  keterangan: survey.keterangan || survey.catatan || '',
+  linkBukti: survey.linkBukti || survey.link_bukti || survey.buktiUrl || survey.bukti || '',
+})
 
 const initialSurveyData = {
   namaToko: '',
@@ -88,11 +101,13 @@ export default function PaketSurveyPage() {
     try {
       const result = await getItemSurveys(itemId)
       if (result.success) {
-        const data = Array.isArray(result.data) ? result.data : result.data?.surveys || []
+        const rawData = Array.isArray(result.data) ? result.data : result.data?.surveys || []
+        // Normalize survey data to handle different field names from API
+        const data = rawData.map(normalizeSurvey)
         setSurveys(prev => ({ ...prev, [itemId]: data }))
       }
     } catch (err) {
-      console.error('Error fetching surveys:', err)
+      // Silent fail - surveys are optional
     } finally {
       setLoadingSurveys(prev => ({ ...prev, [itemId]: false }))
     }
@@ -140,11 +155,12 @@ export default function PaketSurveyPage() {
   }
 
   const handleDeleteSurvey = async () => {
-    if (!deleteModal.survey) return
+    if (!deleteModal.survey || !deleteModal.itemId) return
 
     setDeleting(true)
     try {
-      const result = await deleteSurvey(getId(deleteModal.survey))
+      // Pass both itemId and surveyId to the API
+      const result = await deleteSurvey(deleteModal.itemId, getId(deleteModal.survey))
 
       if (result.success) {
         toast.success('Survey berhasil dihapus')
@@ -472,7 +488,7 @@ export default function PaketSurveyPage() {
         onClose={() => setDeleteModal({ open: false, survey: null, itemId: null })}
         onConfirm={handleDeleteSurvey}
         title="Hapus Survey"
-        message={`Apakah Anda yakin ingin menghapus survey dari "${deleteModal.survey?.namaToko}"?`}
+        message={`Apakah Anda yakin ingin menghapus survey dari "${deleteModal.survey?.namaToko || 'toko ini'}"?`}
         type="danger"
         confirmText="Ya, Hapus"
         loading={deleting}

@@ -252,7 +252,7 @@ export default function PaketDetail() {
     { accessorKey: 'volume', header: 'Volume' },
     { accessorKey: 'satuan', header: 'Satuan' },
     { accessorKey: 'hargaSatuan', header: 'Harga Satuan', cell: ({ getValue }) => formatRupiah(getValue()) },
-    { accessorKey: 'jumlah', header: 'Jumlah', cell: ({ row }) => formatRupiah(row.original.volume * row.original.hargaSatuan) },
+    { accessorKey: 'jumlah', header: 'Jumlah', cell: ({ row }) => formatRupiah((row.original.volume || 0) * (row.original.hargaSatuan || 0)) },
   ]
 
   const dokumenColumns = [

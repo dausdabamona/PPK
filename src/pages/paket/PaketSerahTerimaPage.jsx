@@ -542,7 +542,7 @@ export default function PaketSerahTerimaPage() {
             <DateField
               label="Tanggal Pemeriksaan"
               value={serahTerimaForm.tanggalPemeriksaan}
-              onChange={(e) => setSerahTerimaForm({ ...serahTerimaForm, tanggalPemeriksaan: e.target.value })}
+              onChange={(date) => setSerahTerimaForm({ ...serahTerimaForm, tanggalPemeriksaan: date ? date.toISOString().split('T')[0] : '' })}
               required
             />
           </div>

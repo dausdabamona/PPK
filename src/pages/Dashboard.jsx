@@ -91,9 +91,15 @@ export default function Dashboard() {
         })
 
         // Recent paket (last 5)
-        const sorted = [...paketList].sort((a, b) =>
-          new Date(b.createdAt || b.tanggalBuat) - new Date(a.createdAt || a.tanggalBuat)
-        )
+        const sorted = [...paketList].sort((a, b) => {
+          const dateA = a.createdAt || a.tanggalBuat
+          const dateB = b.createdAt || b.tanggalBuat
+          // Handle undefined/invalid dates by placing them at the end
+          if (!dateA && !dateB) return 0
+          if (!dateA) return 1
+          if (!dateB) return -1
+          return new Date(dateB).getTime() - new Date(dateA).getTime()
+        })
         setPaketTerbaru(sorted.slice(0, 5))
 
         // Paket per status
@@ -118,7 +124,7 @@ export default function Dashboard() {
         setDemoData()
       }
     } catch (err) {
-      console.error('Dashboard error:', err)
+      // If API fails, show demo data instead of error
       setDemoData()
     } finally {
       setLoading(false)

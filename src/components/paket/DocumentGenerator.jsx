@@ -90,28 +90,28 @@ const saveSettings = (settings) => {
 /**
  * Document Preview Component
  */
-export function DocumentPreview({ document, onClose }) {
+export function DocumentPreview({ document: docData, onClose }) {
   const iframeRef = useRef(null)
 
   useEffect(() => {
-    if (iframeRef.current && document) {
-      const doc = iframeRef.current.contentDocument
-      doc.open()
-      doc.write(`
+    if (iframeRef.current && docData) {
+      const iframeDoc = iframeRef.current.contentDocument
+      iframeDoc.open()
+      iframeDoc.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>${document.title}</title>
+            <title>${docData.title}</title>
             ${getDocumentStyles()}
           </head>
           <body>
-            ${document.content}
+            ${docData.content}
           </body>
         </html>
       `)
-      doc.close()
+      iframeDoc.close()
     }
-  }, [document])
+  }, [docData])
 
   const handlePrint = () => {
     if (iframeRef.current) {
@@ -125,27 +125,27 @@ export function DocumentPreview({ document, onClose }) {
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>${document.title}</title>
+          <title>${docData.title}</title>
           ${getDocumentStyles()}
         </head>
         <body>
-          ${document.content}
+          ${docData.content}
         </body>
       </html>
     `
     const blob = new Blob([htmlContent], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${document.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const link = window.document.createElement('a')
+    link.href = url
+    link.download = `${docData.title.replace(/[^a-zA-Z0-9]/g, '_')}.html`
+    window.document.body.appendChild(link)
+    link.click()
+    window.document.body.removeChild(link)
     URL.revokeObjectURL(url)
     toast.success('Dokumen berhasil didownload')
   }
 
-  if (!document) return null
+  if (!docData) return null
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -153,8 +153,8 @@ export function DocumentPreview({ document, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{document.title}</h2>
-            <p className="text-sm text-slate-500">{document.subtitle}</p>
+            <h2 className="text-lg font-semibold text-slate-900">{docData.title}</h2>
+            <p className="text-sm text-slate-500">{docData.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" icon={Printer} onClick={handlePrint}>
@@ -188,7 +188,7 @@ export function DocumentPreview({ document, onClose }) {
 /**
  * Settings Modal
  */
-export function DocumentSettingsModal({ isOpen, onClose, settings, onSave }) {
+export function DocumentSettingsModal({ open, onClose, settings, onSave }) {
   const [form, setForm] = useState(settings)
 
   useEffect(() => {
@@ -207,7 +207,7 @@ export function DocumentSettingsModal({ isOpen, onClose, settings, onSave }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Pengaturan Dokumen" size="lg">
+    <Modal open={open} onClose={onClose} title="Pengaturan Dokumen" size="lg">
       <div className="space-y-6">
         {/* PPK Info */}
         <div>
@@ -554,7 +554,7 @@ export default function DocumentGenerator({
 
       {/* Settings Modal */}
       <DocumentSettingsModal
-        isOpen={showSettings}
+        open={showSettings}
         onClose={() => setShowSettings(false)}
         settings={settings}
         onSave={setSettings}

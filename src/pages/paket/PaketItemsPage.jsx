@@ -10,18 +10,14 @@ import { LoadingPage } from '../../components/common/Loading'
 import { ErrorState } from '../../components/common/ErrorState'
 import { EmptyState } from '../../components/common/EmptyState'
 import { formatRupiah } from '../../utils/formatters'
-import { SATUAN } from '../../utils/constants'
+import { SATUAN, PPN_RATE } from '../../utils/constants'
 import { getPaketDetail, getPaketItems, addPaketItem, updateItem, deleteItem } from '../../api/paket'
 import toast from 'react-hot-toast'
 
 // Helper to get ID from various possible field names
 const getId = (item) => {
   if (!item) return null
-  const id = item.id ?? item.itemId ?? item._id ?? item.rowId ?? item.ID ?? item.Id
-  if (id === null || id === undefined) {
-    console.warn('Could not find ID in item:', Object.keys(item), item)
-  }
-  return id
+  return item.id ?? item.itemId ?? item._id ?? item.rowId ?? item.ID ?? item.Id ?? null
 }
 
 // Helper to parse Indonesian number format (30.472,00 -> 30472)
@@ -95,8 +91,6 @@ export default function PaketItemsPage() {
 
       if (itemsResult.success) {
         const rawData = Array.isArray(itemsResult.data) ? itemsResult.data : itemsResult.data?.items || []
-        console.log('API Response - Items:', itemsResult.data) // Debug log
-        if (rawData.length > 0) console.log('Sample item:', Object.keys(rawData[0]), rawData[0]) // Debug log
         const data = rawData.map(normalizeItem)
         setItems(data)
       }
@@ -295,8 +289,8 @@ export default function PaketItemsPage() {
         </Card>
         <Card className="bg-primary-50 border-primary-200">
           <CardBody>
-            <p className="text-sm text-primary-600">Total + PPN (11%)</p>
-            <p className="text-2xl font-bold text-primary-700">{formatRupiah(totalHPS * 1.11)}</p>
+            <p className="text-sm text-primary-600">Total + PPN ({PPN_RATE * 100}%)</p>
+            <p className="text-2xl font-bold text-primary-700">{formatRupiah(totalHPS * (1 + PPN_RATE))}</p>
           </CardBody>
         </Card>
       </div>

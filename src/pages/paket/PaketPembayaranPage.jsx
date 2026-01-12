@@ -575,7 +575,7 @@ export default function PaketPembayaranPage() {
             <DateField
               label="Tanggal Pengajuan"
               value={terminForm.tanggalPengajuan}
-              onChange={(e) => setTerminForm({ ...terminForm, tanggalPengajuan: e.target.value })}
+              onChange={(date) => setTerminForm({ ...terminForm, tanggalPengajuan: date ? date.toISOString().split('T')[0] : '' })}
             />
             <TextField
               label="Progress (%)"

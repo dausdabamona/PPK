@@ -141,6 +141,17 @@ export const STATUS_PD_LABELS = {
   [STATUS_PD.BATAL]: 'Batal',
 }
 
+export const STATUS_PD_COLORS = {
+  [STATUS_PD.DRAFT]: 'gray',
+  [STATUS_PD.SURAT_TUGAS]: 'primary',
+  [STATUS_PD.SPPD]: 'primary',
+  [STATUS_PD.PELAKSANAAN]: 'warning',
+  [STATUS_PD.SELESAI_PERJALANAN]: 'warning',
+  [STATUS_PD.PERTANGGUNGJAWABAN]: 'primary',
+  [STATUS_PD.SELESAI]: 'success',
+  [STATUS_PD.BATAL]: 'error',
+}
+
 // Tingkat Biaya Perjalanan Dinas
 export const TINGKAT_BIAYA = [
   { value: 'A', label: 'Tingkat A' },
