@@ -229,3 +229,8 @@ export function slugify(text) {
  * Alias for formatTanggalPendek - for convenience
  */
 export const formatDate = formatTanggalPendek
+
+/**
+ * Alias for formatRupiah - for convenience
+ */
+export const formatCurrency = formatRupiah
