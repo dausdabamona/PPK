@@ -17,6 +17,9 @@ const PaketHPSPage = lazy(() => import('./pages/paket/PaketHPSPage'))
 const PaketDokumenPage = lazy(() => import('./pages/paket/PaketDokumenPage'))
 const PaketCompliancePage = lazy(() => import('./pages/paket/PaketCompliancePage'))
 const PaketLampiranPage = lazy(() => import('./pages/paket/PaketLampiranPage'))
+const PaketKontrakPage = lazy(() => import('./pages/paket/PaketKontrakPage'))
+const PaketPembayaranPage = lazy(() => import('./pages/paket/PaketPembayaranPage'))
+const PaketSerahTerimaPage = lazy(() => import('./pages/paket/PaketSerahTerimaPage'))
 
 // Penyedia pages
 const PenyediaList = lazy(() => import('./pages/penyedia/PenyediaList'))
@@ -155,6 +158,30 @@ export default function App() {
             element={
               <PageLoader>
                 <PaketLampiranPage />
+              </PageLoader>
+            }
+          />
+          <Route
+            path=":id/kontrak"
+            element={
+              <PageLoader>
+                <PaketKontrakPage />
+              </PageLoader>
+            }
+          />
+          <Route
+            path=":id/pembayaran"
+            element={
+              <PageLoader>
+                <PaketPembayaranPage />
+              </PageLoader>
+            }
+          />
+          <Route
+            path=":id/serah-terima"
+            element={
+              <PageLoader>
+                <PaketSerahTerimaPage />
               </PageLoader>
             }
           />

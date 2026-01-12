@@ -12,6 +12,11 @@ import {
   CheckCircle,
   AlertTriangle,
   ExternalLink,
+  CreditCard,
+  ClipboardCheck,
+  Shield,
+  FileSearch,
+  Upload,
 } from 'lucide-react'
 import { Card, CardBody, CardHeader, CardTitle } from '../../components/common/Card'
 import { Button, IconButton } from '../../components/common/Button'
@@ -557,6 +562,80 @@ export default function PaketDetail() {
       <Card>
         <CardBody>
           <Tabs tabs={tabs} />
+        </CardBody>
+      </Card>
+
+      {/* Quick Links to Detail Pages */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Akses Cepat</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <Link
+              to={`/paket/${id}/items`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <Package className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Items</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/survey`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <FileSearch className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Survey Harga</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/hps`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <Calculator className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">HPS</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/kontrak`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <Shield className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Kontrak</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/pembayaran`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <CreditCard className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Pembayaran</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/serah-terima`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <ClipboardCheck className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Serah Terima</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/dokumen`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <FileText className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Dokumen</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/lampiran`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <Upload className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Lampiran</span>
+            </Link>
+            <Link
+              to={`/paket/${id}/compliance`}
+              className="flex flex-col items-center p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+            >
+              <CheckCircle className="w-6 h-6 text-primary-600 mb-2" />
+              <span className="text-sm font-medium text-slate-700">Compliance</span>
+            </Link>
+          </div>
         </CardBody>
       </Card>
 
