@@ -16,7 +16,19 @@ import { usePaketStore } from '../../store'
 import toast from 'react-hot-toast'
 
 // Helper to get ID from various possible field names
-const getId = (item) => item?.id || item?._id || item?.paketId || item?.rowId || item?.ID || null
+// Google Apps Script may use different field names for IDs
+const getId = (item) => {
+  if (!item) return null
+  // Try various common ID field names used by different backends
+  const id = item.id ?? item._id ?? item.paketId ?? item.rowId ?? item.ID ??
+             item.row ?? item.rowNumber ?? item.index ?? item.no ?? item.No ??
+             item.Id ?? item.PaketId ?? item.paket_id ?? item.key ?? item.uuid
+  // Log warning if no ID found to help debug
+  if (id === null || id === undefined) {
+    console.warn('Could not find ID in item. Available keys:', Object.keys(item), 'Item:', item)
+  }
+  return id
+}
 
 export default function PaketList() {
   const navigate = useNavigate()
@@ -38,10 +50,19 @@ export default function PaketList() {
       const result = await getPaketList(filters)
 
       if (result.success) {
-        const data = Array.isArray(result.data) ? result.data : result.data?.items || []
+        let data = Array.isArray(result.data) ? result.data : result.data?.items || []
         console.log('API Response - Paket List:', result.data) // Debug log
         console.log('Parsed data:', data) // Debug log
-        if (data.length > 0) console.log('Sample item structure:', data[0]) // Debug log
+        if (data.length > 0) console.log('Sample item structure:', Object.keys(data[0]), data[0]) // Debug log
+
+        // Ensure each item has an ID - use index + 1 as fallback (row number in spreadsheet)
+        data = data.map((item, index) => {
+          if (getId(item) === null || getId(item) === undefined) {
+            return { ...item, id: index + 2 } // +2 because row 1 is usually header
+          }
+          return item
+        })
+
         setPaketList(data)
       } else {
         setError(result.error || 'Gagal memuat data paket')
