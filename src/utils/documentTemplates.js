@@ -1240,6 +1240,441 @@ export const getDocumentStyles = () => `
   </style>
 `
 
+// ==================== PERJALANAN DINAS DOCUMENTS ====================
+
+/**
+ * SPPD - Surat Perintah Perjalanan Dinas
+ */
+export const generateSPPD = (pd, pelaksana = [], settings = {}) => {
+  const pelaksanaUtama = pelaksana.find(p => p.isPenanggungJawab) || pelaksana[0] || {}
+  const tanggalBerangkat = pd.tanggalBerangkat ? formatDate(pd.tanggalBerangkat) : '.....................'
+  const tanggalKembali = pd.tanggalKembali ? formatDate(pd.tanggalKembali) : '.....................'
+
+  // Calculate duration
+  let durasi = 0
+  if (pd.tanggalBerangkat && pd.tanggalKembali) {
+    const start = new Date(pd.tanggalBerangkat)
+    const end = new Date(pd.tanggalKembali)
+    durasi = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+  }
+
+  return {
+    title: 'SURAT PERINTAH PERJALANAN DINAS (SPPD)',
+    subtitle: pd.tujuanDinas,
+    content: \`
+      <div class="document sppd">
+        <div class="header">
+          <div class="kop-surat">
+            <p class="instansi">\${settings.namaInstansi || 'KEMENTERIAN/LEMBAGA'}</p>
+            <p class="satker">\${settings.satuanKerja || 'SATUAN KERJA'}</p>
+            <p class="alamat">\${settings.alamatKantor || 'Alamat Kantor'}</p>
+          </div>
+          <h1>SURAT PERINTAH PERJALANAN DINAS</h1>
+          <p class="nomor">Nomor: \${pd.nomorSPPD || '...................'}</p>
+        </div>
+
+        <div class="section">
+          <table class="info-table sppd-table">
+            <tr>
+              <td width="30">1.</td>
+              <td width="200">Pejabat Pembuat Komitmen</td>
+              <td>: \${settings.namaPPK || '................................'}</td>
+            </tr>
+            <tr>
+              <td>2.</td>
+              <td>Nama/NIP Pegawai yang diperintahkan</td>
+              <td>: \${pelaksanaUtama.nama || '................................'}<br/>
+                 NIP. \${pelaksanaUtama.nip || '................................'}</td>
+            </tr>
+            <tr>
+              <td>3.</td>
+              <td>a. Pangkat dan Golongan<br/>b. Jabatan</td>
+              <td>: \${pelaksanaUtama.pangkat || '-'} / \${pelaksanaUtama.golongan || '-'}<br/>
+                 : \${pelaksanaUtama.jabatan || '-'}</td>
+            </tr>
+            <tr>
+              <td>4.</td>
+              <td>Tingkat Biaya Perjalanan Dinas</td>
+              <td>: \${pelaksanaUtama.tingkatBiaya || 'B'}</td>
+            </tr>
+            <tr>
+              <td>5.</td>
+              <td>Maksud Perjalanan Dinas</td>
+              <td>: \${pd.tujuanDinas || '................................'}</td>
+            </tr>
+            <tr>
+              <td>6.</td>
+              <td>Alat angkutan yang dipergunakan</td>
+              <td>: \${pd.alatAngkutan || 'Kendaraan Dinas/Umum'}</td>
+            </tr>
+            <tr>
+              <td>7.</td>
+              <td>a. Tempat Berangkat<br/>b. Tempat Tujuan</td>
+              <td>: \${pd.kotaAsal || settings.tempatTTD || '..................'}<br/>
+                 : \${pd.kotaTujuan || '................................'}</td>
+            </tr>
+            <tr>
+              <td>8.</td>
+              <td>a. Lamanya Perjalanan Dinas<br/>b. Tanggal Berangkat<br/>c. Tanggal Harus Kembali</td>
+              <td>: \${durasi} (${durasi > 0 ? terbilang(durasi) : '.......'}) hari<br/>
+                 : \${tanggalBerangkat}<br/>
+                 : \${tanggalKembali}</td>
+            </tr>
+            <tr>
+              <td>9.</td>
+              <td>Pengikut: Nama, Tanggal Lahir, Keterangan</td>
+              <td>: \${pelaksana.length > 1 ? pelaksana.slice(1).map((p, i) => \`\${i+1}. \${p.nama}\`).join('<br/>   ') : '-'}</td>
+            </tr>
+            <tr>
+              <td>10.</td>
+              <td>Pembebanan Anggaran<br/>a. Instansi<br/>b. Akun</td>
+              <td><br/>: \${settings.satuanKerja || '................................'}<br/>
+                 : \${pd.mak || '................................'}</td>
+            </tr>
+            <tr>
+              <td>11.</td>
+              <td>Keterangan lain-lain</td>
+              <td>: \${pd.keterangan || '-'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-right">
+            <p>Dikeluarkan di : \${settings.tempatTTD || '..................'}</p>
+            <p>Pada tanggal : \${pd.tanggalSuratTugas ? formatDate(pd.tanggalSuratTugas) : getCurrentDate()}</p>
+            <p class="jabatan">Pejabat Pembuat Komitmen</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${settings.namaPPK || '................................'}</strong></p>
+            <p class="nip">NIP. \${settings.nipPPK || '................................'}</p>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 30px; page-break-before: always;">
+          <h3>II. TANDA TANGAN KEDATANGAN/KEBERANGKATAN</h3>
+          <table class="data-table" style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th colspan="2">Tiba di</th>
+                <th colspan="2">Berangkat dari</th>
+              </tr>
+              <tr>
+                <th>Tempat</th>
+                <th>Tanggal & Tanda Tangan</th>
+                <th>Tempat</th>
+                <th>Tanggal & Tanda Tangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="height: 60px;">\${pd.kotaTujuan || ''}</td>
+                <td></td>
+                <td>\${pd.kotaAsal || settings.tempatTTD || ''}</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td style="height: 60px;">\${pd.kotaAsal || settings.tempatTTD || ''}</td>
+                <td></td>
+                <td>\${pd.kotaTujuan || ''}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section" style="margin-top: 30px;">
+          <h3>III. CATATAN PEJABAT PEMBUAT KOMITMEN</h3>
+          <div style="border: 1px solid #000; min-height: 100px; padding: 10px; margin-top: 10px;">
+            <p>Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.</p>
+          </div>
+          <div class="signature-right" style="margin-top: 20px;">
+            <p>Pejabat Pembuat Komitmen</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${settings.namaPPK || '................................'}</strong></p>
+            <p class="nip">NIP. \${settings.nipPPK || '................................'}</p>
+          </div>
+        </div>
+      </div>
+    \`,
+  }
+}
+
+/**
+ * Kuitansi Rampung - Bukti Pengeluaran Perjalanan Dinas
+ */
+export const generateKuitansiRampung = (pd, pelaksana = [], biaya = [], settings = {}) => {
+  const pelaksanaUtama = pelaksana.find(p => p.isPenanggungJawab) || pelaksana[0] || {}
+  const totalBiaya = biaya.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
+
+  // Calculate duration
+  let durasi = 0
+  if (pd.tanggalBerangkat && pd.tanggalKembali) {
+    const start = new Date(pd.tanggalBerangkat)
+    const end = new Date(pd.tanggalKembali)
+    durasi = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+  }
+
+  // Group biaya by type
+  const biayaByType = {
+    UANG_HARIAN: biaya.filter(b => b.jenisBiaya === 'UANG_HARIAN'),
+    TRANSPORT: biaya.filter(b => b.jenisBiaya === 'TRANSPORT' || b.jenisBiaya === 'TIKET'),
+    PENGINAPAN: biaya.filter(b => b.jenisBiaya === 'PENGINAPAN'),
+    LAINNYA: biaya.filter(b => !['UANG_HARIAN', 'TRANSPORT', 'TIKET', 'PENGINAPAN'].includes(b.jenisBiaya)),
+  }
+
+  const totalUangHarian = biayaByType.UANG_HARIAN.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
+  const totalTransport = biayaByType.TRANSPORT.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
+  const totalPenginapan = biayaByType.PENGINAPAN.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
+  const totalLainnya = biayaByType.LAINNYA.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0)
+
+  return {
+    title: 'KUITANSI/BUKTI PENGELUARAN',
+    subtitle: \`Perjalanan Dinas ke \${pd.kotaTujuan}\`,
+    content: \`
+      <div class="document kuitansi-rampung">
+        <div class="header">
+          <h1>KUITANSI / BUKTI PENGELUARAN</h1>
+          <p>PERJALANAN DINAS</p>
+        </div>
+
+        <div class="section">
+          <table class="info-table" style="margin-bottom: 20px;">
+            <tr>
+              <td width="180">Nama</td>
+              <td>: \${pelaksanaUtama.nama || '................................'}</td>
+            </tr>
+            <tr>
+              <td>NIP</td>
+              <td>: \${pelaksanaUtama.nip || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Pangkat/Golongan</td>
+              <td>: \${pelaksanaUtama.pangkat || '-'} / \${pelaksanaUtama.golongan || '-'}</td>
+            </tr>
+            <tr>
+              <td>Jabatan</td>
+              <td>: \${pelaksanaUtama.jabatan || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Tingkat Perjalanan Dinas</td>
+              <td>: \${pelaksanaUtama.tingkatBiaya || 'B'}</td>
+            </tr>
+          </table>
+
+          <table class="info-table" style="margin-bottom: 20px;">
+            <tr>
+              <td width="180">Maksud Perjalanan</td>
+              <td>: \${pd.tujuanDinas || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Tempat Tujuan</td>
+              <td>: \${pd.kotaTujuan || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Tanggal Berangkat</td>
+              <td>: \${pd.tanggalBerangkat ? formatDate(pd.tanggalBerangkat) : '...................'}</td>
+            </tr>
+            <tr>
+              <td>Tanggal Kembali</td>
+              <td>: \${pd.tanggalKembali ? formatDate(pd.tanggalKembali) : '...................'}</td>
+            </tr>
+            <tr>
+              <td>Lama Perjalanan</td>
+              <td>: \${durasi} (\${durasi > 0 ? terbilang(durasi) : '.......'}) hari</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h3>RINCIAN BIAYA</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Jenis Biaya</th>
+                <th>Keterangan</th>
+                <th style="text-align: right;">Jumlah (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Uang Harian</td>
+                <td>\${durasi} hari x \${pelaksana.length} orang</td>
+                <td style="text-align: right;">\${formatCurrency(totalUangHarian)}</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>Biaya Transport</td>
+                <td>\${biayaByType.TRANSPORT.map(b => b.keterangan).filter(Boolean).join(', ') || '-'}</td>
+                <td style="text-align: right;">\${formatCurrency(totalTransport)}</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>Biaya Penginapan</td>
+                <td>\${biayaByType.PENGINAPAN.length > 0 ? \`\${durasi - 1} malam\` : '-'}</td>
+                <td style="text-align: right;">\${formatCurrency(totalPenginapan)}</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>Biaya Lain-lain</td>
+                <td>\${biayaByType.LAINNYA.map(b => b.keterangan).filter(Boolean).join(', ') || '-'}</td>
+                <td style="text-align: right;">\${formatCurrency(totalLainnya)}</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="3"><strong>JUMLAH</strong></td>
+                <td style="text-align: right;"><strong>\${formatCurrency(totalBiaya)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="amount-box" style="margin-top: 15px;">
+            <p>Terbilang: <em>\${terbilang(totalBiaya)} rupiah</em></p>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 20px;">
+          <h3>RINCIAN PER KOMPONEN</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Uraian</th>
+                <th>Volume</th>
+                <th>Satuan</th>
+                <th style="text-align: right;">Harga Satuan</th>
+                <th style="text-align: right;">Jumlah</th>
+              </tr>
+            </thead>
+            <tbody>
+              \${biaya.map((b, i) => \`
+                <tr>
+                  <td>\${i + 1}</td>
+                  <td>\${b.jenisBiaya || '-'}\${b.keterangan ? ' - ' + b.keterangan : ''}</td>
+                  <td style="text-align: center;">\${b.jumlah || 1}</td>
+                  <td>\${b.satuan || '-'}</td>
+                  <td style="text-align: right;">\${formatCurrency(b.hargaSatuan || 0)}</td>
+                  <td style="text-align: right;">\${formatCurrency(b.total || 0)}</td>
+                </tr>
+              \`).join('')}
+              <tr class="total-row">
+                <td colspan="5"><strong>TOTAL</strong></td>
+                <td style="text-align: right;"><strong>\${formatCurrency(totalBiaya)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="triple-signature">
+          <div class="signature-item">
+            <p>Mengetahui,</p>
+            <p>Pejabat Pembuat Komitmen</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${settings.namaPPK || '........................'}</strong></p>
+            <p class="nip">NIP. \${settings.nipPPK || '........................'}</p>
+          </div>
+          <div class="signature-item">
+            <p>Lunas dibayar,</p>
+            <p>Bendahara Pengeluaran</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${settings.namaBendahara || '........................'}</strong></p>
+            <p class="nip">NIP. \${settings.nipBendahara || '........................'}</p>
+          </div>
+          <div class="signature-item">
+            <p>\${settings.tempatTTD || '............'}, \${getCurrentDate()}</p>
+            <p>Yang Menerima</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${pelaksanaUtama.nama || '........................'}</strong></p>
+            <p class="nip">NIP. \${pelaksanaUtama.nip || '........................'}</p>
+          </div>
+        </div>
+      </div>
+    \`,
+  }
+}
+
+/**
+ * Surat Tugas - Perjalanan Dinas
+ */
+export const generateSuratTugas = (pd, pelaksana = [], settings = {}) => {
+  const tanggalBerangkat = pd.tanggalBerangkat ? formatDate(pd.tanggalBerangkat) : '.....................'
+  const tanggalKembali = pd.tanggalKembali ? formatDate(pd.tanggalKembali) : '.....................'
+
+  return {
+    title: 'SURAT TUGAS',
+    subtitle: pd.tujuanDinas,
+    content: \`
+      <div class="document surat-tugas">
+        <div class="header">
+          <div class="kop-surat">
+            <p class="instansi">\${settings.namaInstansi || 'KEMENTERIAN/LEMBAGA'}</p>
+            <p class="satker">\${settings.satuanKerja || 'SATUAN KERJA'}</p>
+            <p class="alamat">\${settings.alamatKantor || 'Alamat Kantor'}</p>
+          </div>
+          <h1>SURAT TUGAS</h1>
+          <p class="nomor">Nomor: \${pd.nomorSuratTugas || '...................'}</p>
+        </div>
+
+        <div class="section">
+          <p style="margin-bottom: 20px;">Yang bertanda tangan di bawah ini, Pejabat Pembuat Komitmen \${settings.satuanKerja || '...................'}, dengan ini menugaskan:</p>
+
+          <table class="data-table" style="margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>NIP</th>
+                <th>Pangkat/Gol</th>
+                <th>Jabatan</th>
+              </tr>
+            </thead>
+            <tbody>
+              \${pelaksana.map((p, i) => \`
+                <tr>
+                  <td>\${i + 1}</td>
+                  <td>\${p.nama || '-'}</td>
+                  <td>\${p.nip || '-'}</td>
+                  <td>\${p.pangkat || '-'} / \${p.golongan || '-'}</td>
+                  <td>\${p.jabatan || '-'}</td>
+                </tr>
+              \`).join('')}
+            </tbody>
+          </table>
+
+          <p>Untuk melaksanakan perjalanan dinas dalam rangka:</p>
+          <table class="info-table" style="margin: 15px 0;">
+            <tr>
+              <td width="150">Maksud</td>
+              <td>: \${pd.tujuanDinas || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Tempat Tujuan</td>
+              <td>: \${pd.kotaTujuan || '................................'}</td>
+            </tr>
+            <tr>
+              <td>Waktu</td>
+              <td>: \${tanggalBerangkat} s/d \${tanggalKembali}</td>
+            </tr>
+          </table>
+
+          <p style="margin-top: 20px;">Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab.</p>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-right">
+            <p>Ditetapkan di : \${settings.tempatTTD || '..................'}</p>
+            <p>Pada tanggal : \${pd.tanggalSuratTugas ? formatDate(pd.tanggalSuratTugas) : getCurrentDate()}</p>
+            <p class="jabatan">Pejabat Pembuat Komitmen</p>
+            <div class="signature-space"></div>
+            <p class="name"><strong>\${settings.namaPPK || '................................'}</strong></p>
+            <p class="nip">NIP. \${settings.nipPPK || '................................'}</p>
+          </div>
+        </div>
+      </div>
+    \`,
+  }
+}
+
 /**
  * Export all document generators
  */
@@ -1253,6 +1688,33 @@ export const DOCUMENT_GENERATORS = {
   ba_pemeriksaan: generateBAPemeriksaan,
   kuitansi: generateKuitansi,
   spmk: generateSPMK,
+}
+
+/**
+ * Document generators for Perjalanan Dinas
+ */
+export const DOCUMENT_GENERATORS_PD = {
+  surat_tugas: generateSuratTugas,
+  sppd: generateSPPD,
+  kuitansi_rampung: generateKuitansiRampung,
+}
+
+/**
+ * Get documents required for Perjalanan Dinas workflow stage
+ */
+export const getRequiredDocumentsPD = (status) => {
+  const documentsByStage = {
+    DRAFT: [],
+    SURAT_TUGAS: ['surat_tugas'],
+    SPPD: ['surat_tugas', 'sppd'],
+    PELAKSANAAN: ['surat_tugas', 'sppd'],
+    SELESAI_PERJALANAN: ['surat_tugas', 'sppd'],
+    PERTANGGUNGJAWABAN: ['surat_tugas', 'sppd', 'kuitansi_rampung'],
+    SELESAI: ['surat_tugas', 'sppd', 'kuitansi_rampung'],
+    BATAL: [],
+  }
+
+  return documentsByStage[status] || []
 }
 
 /**

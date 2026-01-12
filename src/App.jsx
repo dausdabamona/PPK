@@ -28,6 +28,7 @@ const PenyediaList = lazy(() => import('./pages/penyedia/PenyediaList'))
 const PerjalananDinasList = lazy(() => import('./pages/perjalananDinas/PerjalananDinasList'))
 const PerjalananDinasDetail = lazy(() => import('./pages/perjalananDinas/PerjalananDinasDetail'))
 const PerjalananDinasForm = lazy(() => import('./pages/perjalananDinas/PerjalananDinasForm'))
+const PerjalananDinasDokumenPage = lazy(() => import('./pages/perjalananDinas/PerjalananDinasDokumenPage'))
 
 // Settings pages
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
@@ -230,6 +231,14 @@ export default function App() {
             element={
               <PageLoader>
                 <PerjalananDinasForm />
+              </PageLoader>
+            }
+          />
+          <Route
+            path=":id/dokumen"
+            element={
+              <PageLoader>
+                <PerjalananDinasDokumenPage />
               </PageLoader>
             }
           />

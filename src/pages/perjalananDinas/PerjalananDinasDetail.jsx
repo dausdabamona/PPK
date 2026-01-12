@@ -669,6 +669,9 @@ export default function PerjalananDinasDetail() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link to={`/perjalanan-dinas/${id}/dokumen`}>
+            <Button variant="outline" icon={FileText}>Dokumen</Button>
+          </Link>
           <Link to={`/perjalanan-dinas/${id}/edit`}>
             <Button variant="outline" icon={Edit}>Edit</Button>
           </Link>
