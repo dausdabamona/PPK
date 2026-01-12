@@ -78,7 +78,7 @@ export default function PerjalananDinasList() {
 
     setDeleting(true)
     try {
-      const result = await deletePerjalananDinas(getId(deleteModal.pd))
+      const result = await deletePerjalananDinas(deleteModal.pd.id)
 
       if (result.success) {
         toast.success('Perjalanan dinas berhasil dihapus')
@@ -173,7 +173,7 @@ export default function PerjalananDinasList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/perjalanan-dinas/${getId(row.original)}`)
+              navigate(`/perjalanan-dinas/${row.original.id}`)
             }}
             title="Lihat Detail"
           />
@@ -257,7 +257,7 @@ export default function PerjalananDinasList() {
               data={filteredData}
               loading={pdLoading}
               searchable={false}
-              onRowClick={(row) => navigate(`/perjalanan-dinas/${getId(row)}`)}
+              onRowClick={(row) => navigate(`/perjalanan-dinas/${row.id}`)}
               emptyMessage="Tidak ada perjalanan dinas yang sesuai filter"
             />
           </CardBody>

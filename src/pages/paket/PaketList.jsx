@@ -55,13 +55,12 @@ export default function PaketList() {
         console.log('Parsed data:', data) // Debug log
         if (data.length > 0) console.log('Sample item structure:', Object.keys(data[0]), data[0]) // Debug log
 
-        // Ensure each item has an ID - use index + 1 as fallback (row number in spreadsheet)
-        data = data.map((item, index) => {
-          if (getId(item) === null || getId(item) === undefined) {
-            return { ...item, id: index + 2 } // +2 because row 1 is usually header
-          }
-          return item
-        })
+        // Normalize each item to ensure it has an 'id' property
+        // Always set id from getId() result or fallback to index-based ID
+        data = data.map((item, index) => ({
+          ...item,
+          id: getId(item) ?? `paket-${index}`,
+        }))
 
         setPaketList(data)
       } else {
@@ -79,7 +78,7 @@ export default function PaketList() {
 
     setDeleting(true)
     try {
-      const result = await deletePaket(getId(deleteModal.paket))
+      const result = await deletePaket(deleteModal.paket.id)
 
       if (result.success) {
         toast.success('Paket berhasil dihapus')
@@ -170,7 +169,7 @@ export default function PaketList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/paket/${getId(row.original)}`)
+              navigate(`/paket/${row.original.id}`)
             }}
             title="Lihat Detail"
           />
@@ -180,7 +179,7 @@ export default function PaketList() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/paket/${getId(row.original)}/edit`)
+              navigate(`/paket/${row.original.id}/edit`)
             }}
             title="Edit"
           />
@@ -292,7 +291,7 @@ export default function PaketList() {
               data={filteredData}
               loading={paketLoading}
               searchable={false}
-              onRowClick={(row) => navigate(`/paket/${getId(row)}`)}
+              onRowClick={(row) => navigate(`/paket/${row.id}`)}
               emptyMessage="Tidak ada paket yang sesuai filter"
             />
           </CardBody>
