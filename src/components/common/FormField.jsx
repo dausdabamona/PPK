@@ -186,15 +186,18 @@ export const SearchInput = forwardRef(function SearchInput(
   )
 })
 
-// Form Field with Input
-export function TextField({
-  label,
-  error,
-  helpText,
-  required,
-  className = '',
-  ...props
-}) {
+// Form Field with Input - supports ref forwarding for react-hook-form
+export const TextField = forwardRef(function TextField(
+  {
+    label,
+    error,
+    helpText,
+    required,
+    className = '',
+    ...props
+  },
+  ref
+) {
   return (
     <FormField
       label={label}
@@ -203,20 +206,23 @@ export function TextField({
       required={required}
       className={className}
     >
-      <Input error={error} {...props} />
+      <Input ref={ref} error={error} {...props} />
     </FormField>
   )
-}
+})
 
-// Form Field with Textarea
-export function TextareaField({
-  label,
-  error,
-  helpText,
-  required,
-  className = '',
-  ...props
-}) {
+// Form Field with Textarea - supports ref forwarding for react-hook-form
+export const TextareaField = forwardRef(function TextareaField(
+  {
+    label,
+    error,
+    helpText,
+    required,
+    className = '',
+    ...props
+  },
+  ref
+) {
   return (
     <FormField
       label={label}
@@ -225,20 +231,23 @@ export function TextareaField({
       required={required}
       className={className}
     >
-      <Textarea error={error} {...props} />
+      <Textarea ref={ref} error={error} {...props} />
     </FormField>
   )
-}
+})
 
-// Form Field with Select
-export function SelectField({
-  label,
-  error,
-  helpText,
-  required,
-  className = '',
-  ...props
-}) {
+// Form Field with Select - supports ref forwarding for react-hook-form
+export const SelectField = forwardRef(function SelectField(
+  {
+    label,
+    error,
+    helpText,
+    required,
+    className = '',
+    ...props
+  },
+  ref
+) {
   return (
     <FormField
       label={label}
@@ -247,20 +256,23 @@ export function SelectField({
       required={required}
       className={className}
     >
-      <Select error={error} {...props} />
+      <Select ref={ref} error={error} {...props} />
     </FormField>
   )
-}
+})
 
-// Form Field with Money Input
-export function MoneyField({
-  label,
-  error,
-  helpText,
-  required,
-  className = '',
-  ...props
-}) {
+// Form Field with Money Input - supports ref forwarding for react-hook-form
+export const MoneyField = forwardRef(function MoneyField(
+  {
+    label,
+    error,
+    helpText,
+    required,
+    className = '',
+    ...props
+  },
+  ref
+) {
   return (
     <FormField
       label={label}
@@ -269,10 +281,10 @@ export function MoneyField({
       required={required}
       className={className}
     >
-      <MoneyInput error={error} {...props} />
+      <MoneyInput ref={ref} error={error} {...props} />
     </FormField>
   )
-}
+})
 
 // Form Field with Date Input
 export function DateField({
