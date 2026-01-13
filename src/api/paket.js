@@ -179,6 +179,130 @@ export async function getKategoriUpload() {
   return get('/api/upload/kategori')
 }
 
+// ==================== KONTRAK ====================
+
+/**
+ * Get kontrak data for paket
+ */
+export async function getPaketKontrak(paketId) {
+  return get(`/api/paket/${paketId}/kontrak`)
+}
+
+/**
+ * Update kontrak data
+ */
+export async function updatePaketKontrak(paketId, data) {
+  return post(`/api/paket/${paketId}/kontrak`, data)
+}
+
+// ==================== PEMBAYARAN ====================
+
+/**
+ * Get pembayaran list for paket
+ */
+export async function getPaketPembayaran(paketId) {
+  return get(`/api/paket/${paketId}/pembayaran`)
+}
+
+/**
+ * Add pembayaran to paket
+ */
+export async function addPaketPembayaran(paketId, data) {
+  return post(`/api/paket/${paketId}/pembayaran`, data)
+}
+
+// ==================== SERAH TERIMA ====================
+
+/**
+ * Get serah terima data for paket
+ */
+export async function getPaketSerahTerima(paketId) {
+  return get(`/api/paket/${paketId}/serah-terima`)
+}
+
+/**
+ * Update serah terima data
+ */
+export async function updatePaketSerahTerima(paketId, data) {
+  return post(`/api/paket/${paketId}/serah-terima`, data)
+}
+
+// ==================== WORKFLOW V2 ====================
+
+/**
+ * Get paket workflow status (v2 - with state machine)
+ */
+export async function getWorkflowStatusV2(paketId) {
+  return get(`/api/workflow/v2/paket/${paketId}/status`)
+}
+
+/**
+ * Advance paket workflow (v2)
+ */
+export async function advanceWorkflowV2(paketId, data = {}) {
+  return post(`/api/workflow/v2/paket/${paketId}/advance`, data)
+}
+
+/**
+ * Revert paket workflow (v2)
+ */
+export async function revertWorkflowV2(paketId, data = {}) {
+  return post(`/api/workflow/v2/paket/${paketId}/revert`, data)
+}
+
+/**
+ * Cancel paket (v2)
+ */
+export async function cancelPaketV2(paketId, reason) {
+  return post(`/api/workflow/v2/paket/${paketId}/cancel`, { reason })
+}
+
+/**
+ * Preview transition (v2)
+ */
+export async function previewTransition(paketId, targetState) {
+  return get(`/api/workflow/v2/paket/${paketId}/preview/${targetState}`)
+}
+
+// ==================== COMPLIANCE V2 ====================
+
+/**
+ * Get full audit compliance status
+ */
+export async function getAuditCompliance(paketId) {
+  return get(`/api/audit/paket/${paketId}`)
+}
+
+/**
+ * Validate paket for target stage
+ */
+export async function validateForStage(paketId, targetStage) {
+  return get(`/api/compliance/paket/${paketId}/validate`, { targetStage })
+}
+
+// ==================== DOCUMENTS ====================
+
+/**
+ * Get available document templates
+ */
+export async function getDocumentTemplates() {
+  return get('/api/documents/templates')
+}
+
+/**
+ * Generate document for paket
+ */
+export async function generateDocument(paketId, docType) {
+  return post(`/api/documents/generate/${paketId}`, { docType })
+}
+
+/**
+ * Get documents for paket
+ */
+export async function getPaketDocuments(paketId) {
+  return get(`/api/documents/paket/${paketId}`)
+}
+
 export default {
   getPaketList,
   getPaketDetail,
@@ -204,4 +328,26 @@ export default {
   getPaketLampiran,
   deleteLampiran,
   getKategoriUpload,
+  // Kontrak
+  getPaketKontrak,
+  updatePaketKontrak,
+  // Pembayaran
+  getPaketPembayaran,
+  addPaketPembayaran,
+  // Serah Terima
+  getPaketSerahTerima,
+  updatePaketSerahTerima,
+  // Workflow v2
+  getWorkflowStatusV2,
+  advanceWorkflowV2,
+  revertWorkflowV2,
+  cancelPaketV2,
+  previewTransition,
+  // Compliance v2
+  getAuditCompliance,
+  validateForStage,
+  // Documents
+  getDocumentTemplates,
+  generateDocument,
+  getPaketDocuments,
 }

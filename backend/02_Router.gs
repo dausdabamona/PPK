@@ -25,7 +25,7 @@ function handleRequest(e, method) {
     return createCorsResponse();
   }
 
-  const path = e.parameter.path || e.pathInfo || '';
+  let path = e.parameter.path || e.pathInfo || '';
   const params = e.parameter || {};
 
   // Check for method override (for DELETE via POST)
@@ -34,15 +34,36 @@ function handleRequest(e, method) {
   }
 
   let body = {};
+  let requestData = {};
+
   if (e.postData) {
     try {
-      body = JSON.parse(e.postData.contents);
-      // Check for method override in body
+      const parsed = JSON.parse(e.postData.contents);
+
+      // Handle client format: { path: "...", data: {...} }
+      if (parsed.path && typeof parsed.path === 'string') {
+        // Use body.path if path is empty (for POST requests)
+        if (!path) {
+          path = parsed.path;
+        }
+        // Extract the actual data
+        requestData = parsed.data || {};
+        body = requestData;
+      } else {
+        // Legacy format: body is the data directly
+        body = parsed;
+        requestData = parsed;
+      }
+
+      // Check for method override in body or data
       if (body._method) {
         method = body._method.toUpperCase();
+      } else if (requestData._method) {
+        method = requestData._method.toUpperCase();
       }
     } catch (err) {
       body = {};
+      requestData = {};
     }
   }
 
@@ -194,12 +215,23 @@ function routeRequest(path, method, params, body) {
     if (segments[1] === 'workflow') {
       return runAllWorkflowTests();
     }
-    return { success: false, error: 'Unknown test suite' };
+    if (segments[1] === 'pd') {
+      return runAllPDTests();
+    }
+    if (segments[1] === 'pd-full') {
+      return runFullPDTests();
+    }
+    return { success: false, error: 'Unknown test suite. Available: workflow, pd, pd-full' };
   }
 
   // ==================== REPORTING ====================
   if (segments[0] === 'reporting') {
     return routeReporting(segments.slice(1), method, params, body);
+  }
+
+  // ==================== DOCUMENTS (Sprint 3) ====================
+  if (segments[0] === 'documents') {
+    return routeDocumentTemplate(segments.slice(1), method, params, body);
   }
 
   // ==================== VERSIONING ====================
@@ -285,23 +317,63 @@ function routePerjalananDinas(segments, method, params, body) {
 
   // ========== PELAKSANA ==========
   if (segments[1] === 'pelaksana') {
-    if (method === 'GET') {
+    const pelaksanaId = segments[2];
+
+    // GET /perjalanan-dinas/:id/pelaksana - List pelaksana
+    if (!pelaksanaId && method === 'GET') {
       return { success: true, data: PerjalananDinasService.getPelaksana(pdId) };
     }
-    if (method === 'POST') {
+
+    // POST /perjalanan-dinas/:id/pelaksana - Add pelaksana
+    if (!pelaksanaId && method === 'POST') {
       const result = PerjalananDinasService.addPelaksana(pdId, body);
       return { success: true, data: result };
+    }
+
+    // PUT/POST /perjalanan-dinas/:id/pelaksana/:pelaksanaId - Update pelaksana
+    if (pelaksanaId && (method === 'POST' || method === 'PUT')) {
+      const result = PerjalananDinasService.updatePelaksana(pelaksanaId, body);
+      if (!result) {
+        return { success: false, error: 'Pelaksana tidak ditemukan' };
+      }
+      return { success: true, data: result };
+    }
+
+    // DELETE /perjalanan-dinas/:id/pelaksana/:pelaksanaId - Delete pelaksana
+    if (pelaksanaId && method === 'DELETE') {
+      const success = PerjalananDinasService.deletePelaksana(pelaksanaId);
+      return { success };
     }
   }
 
   // ========== BIAYA ==========
   if (segments[1] === 'biaya') {
-    if (method === 'GET') {
+    const biayaId = segments[2];
+
+    // GET /perjalanan-dinas/:id/biaya - List biaya
+    if (!biayaId && method === 'GET') {
       return { success: true, data: PerjalananDinasService.getBiaya(pdId) };
     }
-    if (method === 'POST') {
+
+    // POST /perjalanan-dinas/:id/biaya - Add biaya
+    if (!biayaId && method === 'POST') {
       const result = PerjalananDinasService.addBiaya(pdId, body);
       return { success: true, data: result };
+    }
+
+    // PUT/POST /perjalanan-dinas/:id/biaya/:biayaId - Update biaya
+    if (biayaId && (method === 'POST' || method === 'PUT')) {
+      const result = PerjalananDinasService.updateBiaya(biayaId, body);
+      if (!result) {
+        return { success: false, error: 'Biaya tidak ditemukan' };
+      }
+      return { success: true, data: result };
+    }
+
+    // DELETE /perjalanan-dinas/:id/biaya/:biayaId - Delete biaya
+    if (biayaId && method === 'DELETE') {
+      const success = PerjalananDinasService.deleteBiaya(biayaId);
+      return { success };
     }
   }
 
@@ -820,4 +892,196 @@ function routeWorkflowV2(segments, method, params, body) {
   }
 
   return { success: false, error: 'Workflow v2 route not found' };
+}
+
+// ========================================
+// EXTENDED WORKFLOW ROUTES (Legacy)
+// ========================================
+
+function routeWorkflowExtended(segments, method, params, body) {
+  // GET /workflow/paket/:id
+  if (segments[0] === 'paket' && method === 'GET') {
+    return { success: true, data: WorkflowService.getPaketStatus(segments[1]) };
+  }
+
+  // POST /workflow/paket/:id/advance
+  if (segments[0] === 'paket' && segments[2] === 'advance' && method === 'POST') {
+    return WorkflowService.advancePaket(segments[1]);
+  }
+
+  // GET /workflow/pd/:id
+  if (segments[0] === 'pd' && method === 'GET') {
+    return { success: true, data: PDWorkflowService.getStatus(segments[1]) };
+  }
+
+  // POST /workflow/pd/:id/advance
+  if (segments[0] === 'pd' && segments[2] === 'advance' && method === 'POST') {
+    return PDWorkflowService.advanceStage(segments[1]);
+  }
+
+  return { success: false, error: 'Workflow route not found' };
+}
+
+// ========================================
+// REPORTING ROUTES (Sprint 3)
+// ========================================
+
+function routeReporting(segments, method, params, body) {
+  // GET /reporting/paket-summary - Paket summary per tahun
+  if (segments[0] === 'paket-summary' && method === 'GET') {
+    const tahun = parseInt(params.tahun) || new Date().getFullYear();
+    return ReportingService.getPaketSummary(tahun, params);
+  }
+
+  // POST /reporting/paket-summary - With body options
+  if (segments[0] === 'paket-summary' && method === 'POST') {
+    const tahun = parseInt(body.tahun) || new Date().getFullYear();
+    return ReportingService.getPaketSummary(tahun, body);
+  }
+
+  // GET /reporting/contract-payment - Contract vs Payment analysis
+  if (segments[0] === 'contract-payment' && method === 'GET') {
+    return ReportingService.getContractVsPayment({
+      tahun: parseInt(params.tahun) || new Date().getFullYear()
+    });
+  }
+
+  // POST /reporting/contract-payment
+  if (segments[0] === 'contract-payment' && method === 'POST') {
+    return ReportingService.getContractVsPayment(body);
+  }
+
+  // GET /reporting/pd-summary - Perjalanan Dinas summary
+  if (segments[0] === 'pd-summary' && method === 'GET') {
+    const tahun = parseInt(params.tahun) || new Date().getFullYear();
+    return ReportingService.getPDSummary(tahun, params);
+  }
+
+  // GET /reporting/compliance-dashboard - Compliance dashboard
+  if (segments[0] === 'compliance-dashboard' && method === 'GET') {
+    return ReportingService.getComplianceDashboard({
+      tahun: parseInt(params.tahun) || new Date().getFullYear()
+    });
+  }
+
+  // GET /reporting/audit-bundle/:paketId - Generate audit bundle
+  if (segments[0] === 'audit-bundle' && segments[1] && method === 'GET') {
+    return ReportingService.generateAuditBundle(segments[1], params);
+  }
+
+  // POST /reporting/audit-bundle/:paketId - Generate audit bundle with options
+  if (segments[0] === 'audit-bundle' && segments[1] && method === 'POST') {
+    return ReportingService.generateAuditBundle(segments[1], body);
+  }
+
+  // POST /reporting/export - Export report to spreadsheet
+  if (segments[0] === 'export' && method === 'POST') {
+    const reportType = body.reportType;
+    if (!reportType) {
+      return { success: false, error: 'reportType required' };
+    }
+
+    let reportData;
+    switch (reportType) {
+      case 'PAKET_SUMMARY':
+        const paketSummary = ReportingService.getPaketSummary(body.tahun || new Date().getFullYear());
+        if (!paketSummary.success) return paketSummary;
+        reportData = paketSummary.data;
+        break;
+      case 'CONTRACT_PAYMENT':
+        const contractPayment = ReportingService.getContractVsPayment(body);
+        if (!contractPayment.success) return contractPayment;
+        reportData = contractPayment.data;
+        break;
+      case 'PD_SUMMARY':
+        const pdSummary = ReportingService.getPDSummary(body.tahun || new Date().getFullYear());
+        if (!pdSummary.success) return pdSummary;
+        reportData = pdSummary.data;
+        break;
+      case 'COMPLIANCE':
+        const compliance = ReportingService.getComplianceDashboard(body);
+        if (!compliance.success) return compliance;
+        reportData = compliance.data;
+        break;
+      default:
+        return { success: false, error: 'Unknown reportType: ' + reportType };
+    }
+
+    return ReportingService.exportToSpreadsheet(reportType, reportData);
+  }
+
+  return { success: false, error: 'Reporting route not found' };
+}
+
+// ========================================
+// DOCUMENT TEMPLATE ROUTES (Sprint 3)
+// ========================================
+
+function routeDocumentTemplate(segments, method, params, body) {
+  // GET /documents/templates - List available templates
+  if (segments[0] === 'templates' && method === 'GET') {
+    return {
+      success: true,
+      data: DocumentTemplateService.getAvailableTemplates()
+    };
+  }
+
+  // POST /documents/generate/:paketId - Generate document
+  if (segments[0] === 'generate' && segments[1] && method === 'POST') {
+    const paketId = segments[1];
+    const docType = body.docType || body.type;
+
+    if (!docType) {
+      return { success: false, error: 'docType required in body' };
+    }
+
+    return DocumentTemplateService.generate(paketId, docType.toUpperCase(), body);
+  }
+
+  // GET /documents/paket/:paketId - List documents for a paket
+  if (segments[0] === 'paket' && segments[1] && method === 'GET') {
+    return {
+      success: true,
+      data: DokumenService.getByPaket(segments[1])
+    };
+  }
+
+  return { success: false, error: 'Document route not found' };
+}
+
+// ========================================
+// VERSIONING ROUTES
+// ========================================
+
+function routeVersioning(segments, method, params, body) {
+  // GET /versioning/:docType/:docId - Get version history
+  if (segments.length === 2 && method === 'GET') {
+    const docType = segments[0];
+    const docId = segments[1];
+    return VersioningService.getHistory(docType, docId);
+  }
+
+  // POST /versioning/:docType/:docId - Create new version
+  if (segments.length === 2 && method === 'POST') {
+    const docType = segments[0];
+    const docId = segments[1];
+    return VersioningService.createVersion(docType, docId, body);
+  }
+
+  // GET /versioning/:docType/:docId/latest - Get latest version
+  if (segments[2] === 'latest' && method === 'GET') {
+    const docType = segments[0];
+    const docId = segments[1];
+    return VersioningService.getLatest(docType, docId);
+  }
+
+  // GET /versioning/:docType/:docId/:version - Get specific version
+  if (segments.length === 3 && method === 'GET') {
+    const docType = segments[0];
+    const docId = segments[1];
+    const version = parseInt(segments[2]);
+    return VersioningService.getVersion(docType, docId, version);
+  }
+
+  return { success: false, error: 'Versioning route not found' };
 }

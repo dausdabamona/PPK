@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, FileText, Settings, Printer, Download, Eye, X } from 'lucide-react'
+import { ArrowLeft, RefreshCw, FileText, Settings, Printer, Download, Eye, X, ExternalLink, Loader2, Cloud, CheckCircle } from 'lucide-react'
 import { Card, CardBody, CardHeader, CardTitle } from '../../components/common/Card'
 import { Button } from '../../components/common/Button'
 import { Modal, ModalBody, ModalFooter } from '../../components/common/Modal'
@@ -8,7 +8,7 @@ import { TextField } from '../../components/common/FormField'
 import { LoadingPage } from '../../components/common/Loading'
 import { ErrorState } from '../../components/common/ErrorState'
 import { Badge, StatusBadge } from '../../components/common/Badge'
-import { getPerjalananDinasDetail, getPelaksana, getBiaya } from '../../api/perjalananDinas'
+import { getPerjalananDinasDetail, getPelaksana, getBiaya, generateDokumen, getDokumen } from '../../api/perjalananDinas'
 import { getConfig } from '../../api/config'
 import {
   DOCUMENT_GENERATORS_PD,
@@ -197,9 +197,11 @@ export default function PerjalananDinasDokumenPage() {
   const [pd, setPd] = useState(null)
   const [pelaksana, setPelaksana] = useState([])
   const [biaya, setBiaya] = useState([])
+  const [savedDokumen, setSavedDokumen] = useState([])
   const [settings, setSettings] = useState(loadSettings())
   const [settingsModal, setSettingsModal] = useState(false)
   const [previewDoc, setPreviewDoc] = useState(null)
+  const [generating, setGenerating] = useState({})
 
   useEffect(() => {
     fetchData()
@@ -229,10 +231,11 @@ export default function PerjalananDinasDokumenPage() {
       if (pdResult.success) {
         setPd(pdResult.data)
 
-        // Fetch pelaksana and biaya
-        const [pelaksanaResult, biayaResult] = await Promise.all([
+        // Fetch pelaksana, biaya, and saved documents
+        const [pelaksanaResult, biayaResult, dokumenResult] = await Promise.all([
           getPelaksana(pdId),
           getBiaya(pdId),
+          getDokumen(pdId),
         ])
 
         if (pelaksanaResult.success) {
@@ -247,6 +250,13 @@ export default function PerjalananDinasDokumenPage() {
             ? biayaResult.data
             : biayaResult.data?.items || []
           setBiaya(data)
+        }
+
+        if (dokumenResult.success) {
+          const data = Array.isArray(dokumenResult.data)
+            ? dokumenResult.data
+            : dokumenResult.data?.items || []
+          setSavedDokumen(data)
         }
       } else {
         setError(pdResult.error || 'Gagal memuat data perjalanan dinas')
@@ -278,6 +288,58 @@ export default function PerjalananDinasDokumenPage() {
       console.error('Error generating document:', err)
       toast.error('Gagal generate dokumen')
     }
+  }
+
+  // Generate document to Google Drive via backend API
+  const handleGenerateToGoogleDrive = async (docType) => {
+    if (pelaksana.length === 0) {
+      toast.error('Tambahkan data pelaksana terlebih dahulu')
+      return
+    }
+
+    if (docType === 'kuitansi_rampung' && biaya.length === 0) {
+      toast.error('Tambahkan data biaya terlebih dahulu untuk Kuitansi Rampung')
+      return
+    }
+
+    setGenerating(prev => ({ ...prev, [docType]: true }))
+
+    try {
+      const result = await generateDokumen(pdId, docType)
+
+      if (result.success) {
+        toast.success(`${DOCUMENT_INFO[docType]?.name || docType} berhasil dibuat!`)
+        // Refresh documents list
+        const dokumenResult = await getDokumen(pdId)
+        if (dokumenResult.success) {
+          const data = Array.isArray(dokumenResult.data)
+            ? dokumenResult.data
+            : dokumenResult.data?.items || []
+          setSavedDokumen(data)
+        }
+        // Open document in new tab
+        if (result.data?.googleDocUrl) {
+          window.open(result.data.googleDocUrl, '_blank')
+        }
+      } else {
+        toast.error(result.error || `Gagal membuat ${docType}`)
+      }
+    } catch (err) {
+      toast.error(`Gagal membuat ${docType}`)
+    } finally {
+      setGenerating(prev => ({ ...prev, [docType]: false }))
+    }
+  }
+
+  // Check if document is already saved
+  const isDocSaved = (docType) => {
+    return savedDokumen.some(d => d.jenisDokumen?.toLowerCase() === docType.toLowerCase())
+  }
+
+  // Get saved document URL
+  const getSavedDocUrl = (docType) => {
+    const doc = savedDokumen.find(d => d.jenisDokumen?.toLowerCase() === docType.toLowerCase())
+    return doc?.googleDocUrl
   }
 
   // Calculate totals
@@ -368,35 +430,77 @@ export default function PerjalananDinasDokumenPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(DOCUMENT_INFO).map(([key, info]) => {
               const isRequired = requiredDocs.includes(key)
+              const isSaved = isDocSaved(key)
+              const savedUrl = getSavedDocUrl(key)
+              const isLoading = generating[key]
 
               return (
                 <div
                   key={key}
                   className={`p-4 rounded-lg border-2 ${
-                    isRequired
-                      ? 'border-primary-200 bg-primary-50'
-                      : 'border-slate-200 bg-white'
+                    isSaved
+                      ? 'border-green-200 bg-green-50'
+                      : isRequired
+                        ? 'border-primary-200 bg-primary-50'
+                        : 'border-slate-200 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <FileText className={`w-5 h-5 ${isRequired ? 'text-primary-600' : 'text-slate-400'}`} />
+                      <FileText className={`w-5 h-5 ${isSaved ? 'text-green-600' : isRequired ? 'text-primary-600' : 'text-slate-400'}`} />
                       <h3 className="font-medium text-slate-900">{info.name}</h3>
                     </div>
-                    {isRequired && (
-                      <Badge variant="primary" size="sm">Diperlukan</Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isSaved && (
+                        <Badge variant="success" size="sm" className="flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Tersimpan
+                        </Badge>
+                      )}
+                      {!isSaved && isRequired && (
+                        <Badge variant="primary" size="sm">Diperlukan</Badge>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-slate-500 mb-4">{info.description}</p>
-                  <Button
-                    variant={isRequired ? 'primary' : 'outline'}
-                    size="sm"
-                    icon={Eye}
-                    onClick={() => handleGenerateDocument(key)}
-                    className="w-full"
-                  >
-                    Generate & Preview
-                  </Button>
+
+                  {/* Action buttons */}
+                  <div className="space-y-2">
+                    {/* Preview button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={Eye}
+                      onClick={() => handleGenerateDocument(key)}
+                      className="w-full"
+                    >
+                      Preview Lokal
+                    </Button>
+
+                    {/* Save to Google Drive button */}
+                    {isSaved ? (
+                      <a
+                        href={savedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Buka di Google Docs
+                      </a>
+                    ) : (
+                      <Button
+                        variant={isRequired ? 'primary' : 'secondary'}
+                        size="sm"
+                        icon={isLoading ? Loader2 : Cloud}
+                        onClick={() => handleGenerateToGoogleDrive(key)}
+                        className="w-full"
+                        disabled={isLoading || pelaksana.length === 0}
+                      >
+                        {isLoading ? 'Menyimpan...' : 'Simpan ke Google Drive'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )
             })}

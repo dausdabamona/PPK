@@ -773,77 +773,194 @@ const PerjalananDinasService = {
 
     try {
       const config = ConfigService.getConfig();
-      const doc = DocumentApp.create('Rincian Biaya PD - ' + (pd.tujuan || pd.maksudTujuan));
+      const doc = DocumentApp.create('Kuitansi Rampung - ' + (pd.tujuan || pd.maksudTujuan));
       const body = doc.getBody();
 
       body.setPageWidth(595.276);
       body.setPageHeight(841.89);
-      body.setMarginTop(50);
-      body.setMarginBottom(40);
-      body.setMarginLeft(50);
-      body.setMarginRight(50);
+      body.setMarginTop(40);
+      body.setMarginBottom(30);
+      body.setMarginLeft(40);
+      body.setMarginRight(40);
 
       // Title
-      const title = body.appendParagraph('RINCIAN BIAYA PERJALANAN DINAS');
+      const title = body.appendParagraph('KUITANSI / BUKTI PEMBAYARAN RAMPUNG');
       title.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
       title.setBold(true);
-      title.setFontSize(14);
+      title.setFontSize(12);
 
       body.appendParagraph('');
 
-      // Info
+      // SPPD Info
       const infoTable = body.appendTable();
       infoTable.setBorderWidth(0);
 
       const infoRow1 = infoTable.appendTableRow();
-      infoRow1.appendTableCell('Lampiran SPPD Nomor').setWidth(150);
-      infoRow1.appendTableCell(': ' + (pd.nomorSPPD || pd.nomorST || '-'));
+      infoRow1.appendTableCell('Nomor SPPD').setWidth(100);
+      infoRow1.appendTableCell(': ' + (pd.nomorSPPD || pd.nomorST || '............/PL.05/................./................'));
 
       const infoRow2 = infoTable.appendTableRow();
-      infoRow2.appendTableCell('Tanggal');
-      infoRow2.appendTableCell(': ' + formatTanggalIndo(pd.tanggalBerangkat));
+      infoRow2.appendTableCell('Tanggal SPPD');
+      infoRow2.appendTableCell(': ' + formatTanggalIndo(pd.tanggalSPPD || pd.tanggalST || pd.tanggalBerangkat));
 
       body.appendParagraph('');
 
-      // Biaya table
+      // Biaya table with proper columns
       const biayaTable = body.appendTable();
 
+      // Header row
       const headerRow = biayaTable.appendTableRow();
-      headerRow.appendTableCell('NO.').setBold(true).setWidth(35);
-      headerRow.appendTableCell('PERINCIAN BIAYA').setBold(true).setWidth(250);
-      headerRow.appendTableCell('JUMLAH').setBold(true).setWidth(100);
-      headerRow.appendTableCell('KET.').setBold(true).setWidth(80);
+      const hNo = headerRow.appendTableCell('No');
+      hNo.setBold(true).setWidth(25);
+      hNo.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const hPerincian = headerRow.appendTableCell('Perincian Biaya');
+      hPerincian.setBold(true).setWidth(150);
+      hPerincian.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const hJmlSatuan = headerRow.appendTableCell('Jumlah Satuan');
+      hJmlSatuan.setBold(true).setWidth(80);
+      hJmlSatuan.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const hTarif = headerRow.appendTableCell('Tarif (Rp)');
+      hTarif.setBold(true).setWidth(70);
+      hTarif.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const hJumlah = headerRow.appendTableCell('Jumlah (Rp)');
+      hJumlah.setBold(true).setWidth(80);
+      hJumlah.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const hKet = headerRow.appendTableCell('Ket.');
+      hKet.setBold(true).setWidth(50);
+      hKet.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      // Group biaya by category
+      const biayaByCategory = {
+        UANG_HARIAN: [],
+        TRANSPORT: [],
+        PENGINAPAN: [],
+        REPRESENTASI: [],
+        LAINNYA: []
+      };
 
       let totalBiaya = 0;
       if (pd.biaya && pd.biaya.length > 0) {
-        pd.biaya.forEach((b, idx) => {
-          const bRow = biayaTable.appendTableRow();
-          bRow.appendTableCell(String(idx + 1) + '.');
-
-          const uraian = JENIS_BIAYA_PD[b.jenisBiaya] || b.jenisBiaya || '-';
-          const detail = b.keterangan ? '\n' + b.keterangan : '';
-          const volume = b.jumlah && b.satuan ? '\n(' + b.jumlah + ' ' + b.satuan + ' x Rp ' + formatRupiahDoc(b.hargaSatuan || 0) + ')' : '';
-          bRow.appendTableCell(uraian + detail + volume);
-
-          const jumlahCell = bRow.appendTableCell('Rp ' + formatRupiahDoc(b.total || 0));
-          jumlahCell.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
-
-          bRow.appendTableCell('');
+        pd.biaya.forEach(b => {
           totalBiaya += (b.total || 0);
+          if (b.jenisBiaya === 'UANG_HARIAN') {
+            biayaByCategory.UANG_HARIAN.push(b);
+          } else if (['TIKET_PP', 'TRANSPORT_LOKAL', 'BBM', 'TOL', 'PARKIR'].includes(b.jenisBiaya)) {
+            biayaByCategory.TRANSPORT.push(b);
+          } else if (b.jenisBiaya === 'PENGINAPAN') {
+            biayaByCategory.PENGINAPAN.push(b);
+          } else if (b.jenisBiaya === 'REPRESENTASI') {
+            biayaByCategory.REPRESENTASI.push(b);
+          } else {
+            biayaByCategory.LAINNYA.push(b);
+          }
         });
-      } else {
-        for (let i = 1; i <= 5; i++) {
-          const emptyRow = biayaTable.appendTableRow();
-          emptyRow.appendTableCell(String(i) + '.');
-          emptyRow.appendTableCell('');
-          emptyRow.appendTableCell('');
-          emptyRow.appendTableCell('');
-        }
       }
+
+      // Row 1: Uang Harian
+      const row1 = biayaTable.appendTableRow();
+      row1.appendTableCell('1').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      row1.appendTableCell('Uang Harian');
+      if (biayaByCategory.UANG_HARIAN.length > 0) {
+        const uh = biayaByCategory.UANG_HARIAN[0];
+        row1.appendTableCell((uh.jumlah || pd.lamaHari || '-') + ' hari');
+        row1.appendTableCell(formatRupiahDoc(uh.hargaSatuan || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+        row1.appendTableCell(formatRupiahDoc(uh.total || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+      } else {
+        row1.appendTableCell(pd.lamaHari + ' hari');
+        row1.appendTableCell('-');
+        row1.appendTableCell('-');
+      }
+      row1.appendTableCell('');
+
+      // Row 2: Biaya Transport
+      const row2 = biayaTable.appendTableRow();
+      row2.appendTableCell('2').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      const transportCell = row2.appendTableCell();
+      transportCell.appendParagraph('Biaya Transport');
+      if (biayaByCategory.TRANSPORT.length > 0) {
+        biayaByCategory.TRANSPORT.forEach((t, idx) => {
+          const label = String.fromCharCode(97 + idx) + '. ' + (t.keterangan || JENIS_BIAYA_PD[t.jenisBiaya] || t.jenisBiaya);
+          transportCell.appendParagraph(label);
+        });
+        const totalTransport = biayaByCategory.TRANSPORT.reduce((sum, t) => sum + (t.total || 0), 0);
+        row2.appendTableCell('');
+        row2.appendTableCell('');
+        row2.appendTableCell(formatRupiahDoc(totalTransport)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+      } else {
+        transportCell.appendParagraph('a. .................................');
+        transportCell.appendParagraph('b. .................................');
+        row2.appendTableCell('');
+        row2.appendTableCell('');
+        row2.appendTableCell('-');
+      }
+      row2.appendTableCell('');
+
+      // Row 3: Biaya Penginapan
+      const row3 = biayaTable.appendTableRow();
+      row3.appendTableCell('3').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      row3.appendTableCell('Biaya Penginapan');
+      if (biayaByCategory.PENGINAPAN.length > 0) {
+        const pn = biayaByCategory.PENGINAPAN[0];
+        row3.appendTableCell((pn.jumlah || '-') + ' malam');
+        row3.appendTableCell(formatRupiahDoc(pn.hargaSatuan || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+        row3.appendTableCell(formatRupiahDoc(pn.total || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+      } else {
+        row3.appendTableCell('- malam');
+        row3.appendTableCell('-');
+        row3.appendTableCell('-');
+      }
+      row3.appendTableCell('');
+
+      // Row 4: Uang Representasi
+      const row4 = biayaTable.appendTableRow();
+      row4.appendTableCell('4').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      row4.appendTableCell('Uang Representasi (Jika ada)');
+      if (biayaByCategory.REPRESENTASI.length > 0) {
+        const rp = biayaByCategory.REPRESENTASI[0];
+        row4.appendTableCell((rp.jumlah || '-') + ' ' + (rp.satuan || ''));
+        row4.appendTableCell(formatRupiahDoc(rp.hargaSatuan || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+        row4.appendTableCell(formatRupiahDoc(rp.total || 0)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+      } else {
+        row4.appendTableCell('-');
+        row4.appendTableCell('-');
+        row4.appendTableCell('-');
+      }
+      row4.appendTableCell('');
+
+      // Row 5: Biaya Lain-lain
+      const row5 = biayaTable.appendTableRow();
+      row5.appendTableCell('5').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      const lainCell = row5.appendTableCell();
+      lainCell.appendParagraph('Biaya Lain-lain yang sah');
+      if (biayaByCategory.LAINNYA.length > 0) {
+        biayaByCategory.LAINNYA.forEach((l, idx) => {
+          const label = String.fromCharCode(97 + idx) + '. ' + (l.keterangan || JENIS_BIAYA_PD[l.jenisBiaya] || l.jenisBiaya);
+          lainCell.appendParagraph(label);
+        });
+        const totalLain = biayaByCategory.LAINNYA.reduce((sum, l) => sum + (l.total || 0), 0);
+        row5.appendTableCell('');
+        row5.appendTableCell('');
+        row5.appendTableCell(formatRupiahDoc(totalLain)).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+      } else {
+        lainCell.appendParagraph('a. .................................');
+        lainCell.appendParagraph('b. .................................');
+        row5.appendTableCell('');
+        row5.appendTableCell('');
+        row5.appendTableCell('-');
+      }
+      row5.appendTableCell('');
 
       // Total row
       const totalRow = biayaTable.appendTableRow();
-      totalRow.appendTableCell('JUMLAH').setBold(true);
+      totalRow.appendTableCell('');
+      const jmlCell = totalRow.appendTableCell('JUMLAH');
+      jmlCell.setBold(true);
+      totalRow.appendTableCell('');
       totalRow.appendTableCell('');
       const totalCell = totalRow.appendTableCell('Rp ' + formatRupiahDoc(totalBiaya));
       totalCell.setBold(true);
@@ -852,43 +969,76 @@ const PerjalananDinasService = {
 
       // Terbilang
       body.appendParagraph('');
-      body.appendParagraph('Terbilang: ' + terbilangClean(totalBiaya) + ' rupiah').setItalic(true);
+      const terbilangText = body.appendParagraph('Terbilang: ' + terbilangClean(totalBiaya) + ' rupiah');
+      terbilangText.setItalic(true);
 
       body.appendParagraph('');
 
-      // Signatures
+      // Signatures - 3 columns
       const signTable = body.appendTable();
       signTable.setBorderWidth(0);
 
-      const dateRow = signTable.appendTableRow();
-      dateRow.appendTableCell('').setWidth(250);
-      dateRow.appendTableCell((config.kotaSatker || 'Malang') + ', ' + formatTanggalIndo(new Date().toISOString()));
-
+      // Row 1: Labels
       const labelRow = signTable.appendTableRow();
+
       const leftLabel = labelRow.appendTableCell();
-      leftLabel.appendParagraph('Telah dibayar sejumlah');
-      leftLabel.appendParagraph('Rp ' + formatRupiahDoc(totalBiaya));
+      leftLabel.setWidth(170);
+      leftLabel.appendParagraph('Telah dibayar sejumlah:');
+      leftLabel.appendParagraph('Rp ' + formatRupiahDoc(totalBiaya)).setBold(true);
+      leftLabel.appendParagraph('');
+      leftLabel.appendParagraph('Bendahara Pengeluaran,').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const middleLabel = labelRow.appendTableCell();
+      middleLabel.setWidth(170);
+      const kotaTTD = config.kotaSatker || 'Sorong';
+      middleLabel.appendParagraph(kotaTTD + ', ' + formatTanggalIndo(new Date().toISOString()));
+      middleLabel.appendParagraph('');
+      middleLabel.appendParagraph('Telah menerima jumlah uang sebesar:');
+      middleLabel.appendParagraph('Rp ' + formatRupiahDoc(totalBiaya)).setBold(true);
+      middleLabel.appendParagraph('Yang menerima,').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
       const rightLabel = labelRow.appendTableCell();
-      rightLabel.appendParagraph('Telah menerima jumlah uang sebesar');
-      rightLabel.appendParagraph('Rp ' + formatRupiahDoc(totalBiaya));
+      rightLabel.setWidth(170);
 
-      const signLabelRow = signTable.appendTableRow();
-      signLabelRow.appendTableCell('Bendahara Pengeluaran,').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      signLabelRow.appendTableCell('Yang menerima,').getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-
+      // Space for signatures
       const spaceRow = signTable.appendTableRow();
-      spaceRow.appendTableCell('\n\n\n\n');
-      spaceRow.appendTableCell('\n\n\n\n');
+      spaceRow.appendTableCell('\n\n\n');
+      spaceRow.appendTableCell('\n\n\n');
+      spaceRow.appendTableCell('');
 
+      // Names row
       const pelaksana = pd.pelaksana && pd.pelaksana.length > 0 ? pd.pelaksana[0] : {};
 
       const nameRow = signTable.appendTableRow();
+
       const leftName = nameRow.appendTableCell();
-      leftName.appendParagraph(config.namaBendahara || '....................').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      leftName.appendParagraph('NIP. ' + (config.nipBendahara || '....................')).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      leftName.appendParagraph(config.namaBendahara || '............................................').setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      leftName.appendParagraph('NIP. ' + (config.nipBendahara || '......................................')).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+      const middleName = nameRow.appendTableCell();
+      middleName.appendParagraph(pelaksana.nama || '............................................').setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      middleName.appendParagraph('NIP. ' + (pelaksana.nip || '......................................')).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
       const rightName = nameRow.appendTableCell();
-      rightName.appendParagraph(pelaksana.nama || '....................').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-      rightName.appendParagraph('NIP. ' + (pelaksana.nip || '....................')).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      rightName.appendParagraph('');
+
+      // PPK approval section
+      body.appendParagraph('');
+
+      const ppkTable = body.appendTable();
+      ppkTable.setBorderWidth(0);
+
+      const ppkRow = ppkTable.appendTableRow();
+      ppkRow.appendTableCell('').setWidth(340);
+
+      const ppkCell = ppkRow.appendTableCell();
+      ppkCell.setWidth(170);
+      ppkCell.appendParagraph('Perhitungan rampung diperiksa dan disetujui');
+      ppkCell.appendParagraph('untuk dibayar sebesar Rp ' + formatRupiahDoc(totalBiaya));
+      ppkCell.appendParagraph('Pejabat Pembuat Komitmen,').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      ppkCell.appendParagraph('\n\n\n');
+      ppkCell.appendParagraph(config.namaPPK || '............................................').setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      ppkCell.appendParagraph('NIP. ' + (config.nipPPK || '......................................')).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
       doc.saveAndClose();
 

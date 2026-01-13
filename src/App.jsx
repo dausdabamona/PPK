@@ -35,6 +35,10 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const NumberingPage = lazy(() => import('./pages/settings/NumberingPage'))
 const ApiSettingsPage = lazy(() => import('./pages/settings/ApiSettingsPage'))
 
+// Document Center & Reporting pages (Sprint 4)
+const DocumentCenter = lazy(() => import('./pages/DocumentCenter'))
+const ReportingPage = lazy(() => import('./pages/reporting/ReportingPage'))
+
 // Page wrapper with suspense
 function PageLoader({ children }) {
   return (
@@ -244,8 +248,28 @@ export default function App() {
           />
         </Route>
 
-        {/* Dokumen Routes - redirect to paket for now */}
-        <Route path="dokumen" element={<Navigate to="/paket" replace />} />
+        {/* Document Center (Sprint 4) */}
+        <Route
+          path="document-center"
+          element={
+            <PageLoader>
+              <DocumentCenter />
+            </PageLoader>
+          }
+        />
+
+        {/* Reporting (Sprint 4) */}
+        <Route
+          path="reporting"
+          element={
+            <PageLoader>
+              <ReportingPage />
+            </PageLoader>
+          }
+        />
+
+        {/* Dokumen Routes - redirect to document center */}
+        <Route path="dokumen" element={<Navigate to="/document-center" replace />} />
 
         {/* Settings Routes */}
         <Route path="settings">
