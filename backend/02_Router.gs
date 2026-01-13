@@ -210,7 +210,7 @@ function routeRequest(path, method, params, body) {
     return routeAudit(segments.slice(1), method, params, body);
   }
 
-  // ==================== TESTS (Sprint 2) ====================
+  // ==================== TESTS ====================
   if (segments[0] === 'tests') {
     if (segments[1] === 'workflow') {
       return runAllWorkflowTests();
@@ -221,7 +221,33 @@ function routeRequest(path, method, params, body) {
     if (segments[1] === 'pd-full') {
       return runFullPDTests();
     }
-    return { success: false, error: 'Unknown test suite. Available: workflow, pd, pd-full' };
+    if (segments[1] === 'sprint5') {
+      return runAllSprint5Tests();
+    }
+    if (segments[1] === 'sprint5-full') {
+      return runFullSprint5Tests();
+    }
+    return { success: false, error: 'Unknown test suite. Available: workflow, pd, pd-full, sprint5, sprint5-full' };
+  }
+
+  // ==================== BACKUP (Sprint 5) ====================
+  if (segments[0] === 'backup') {
+    return routeBackup(segments.slice(1), method, params, body);
+  }
+
+  // ==================== DOCUMENT FINALIZATION (Sprint 5) ====================
+  if (segments[0] === 'document-master') {
+    return routeDocumentMaster(segments.slice(1), method, params, body);
+  }
+
+  // ==================== AUDIT SIMULATION (Sprint 5) ====================
+  if (segments[0] === 'audit-simulation') {
+    return routeAuditSimulation(segments.slice(1), method, params, body);
+  }
+
+  // ==================== SOP (Sprint 5) ====================
+  if (segments[0] === 'sop') {
+    return routeSOP(segments.slice(1), method, params, body);
   }
 
   // ==================== REPORTING ====================
@@ -1084,4 +1110,220 @@ function routeVersioning(segments, method, params, body) {
   }
 
   return { success: false, error: 'Versioning route not found' };
+}
+
+// ========================================
+// SPRINT 5: BACKUP ROUTES
+// ========================================
+
+function routeBackup(segments, method, params, body) {
+  // GET /backup/stats - Get backup statistics
+  if (segments[0] === 'stats' && method === 'GET') {
+    const tahun = params.tahun || null;
+    return { success: true, data: BackupService.getBackupStats(tahun) };
+  }
+
+  // GET /backup/history - Get backup history
+  if (segments[0] === 'history' && method === 'GET') {
+    const tahun = params.tahun || null;
+    const limit = parseInt(params.limit) || 50;
+    return { success: true, data: BackupService.getBackupHistory(tahun, limit) };
+  }
+
+  // POST /backup/create - Create backup
+  if (segments[0] === 'create' && method === 'POST') {
+    const description = body.description || 'Manual';
+    return BackupService.createBackup(description);
+  }
+
+  // POST /backup/incremental - Create incremental backup
+  if (segments[0] === 'incremental' && method === 'POST') {
+    const sheets = body.sheets || [];
+    const description = body.description || 'Incremental';
+    return BackupService.createIncrementalBackup(sheets, description);
+  }
+
+  // POST /backup/restore/:backupId - Restore from backup
+  if (segments[0] === 'restore' && segments.length === 2 && method === 'POST') {
+    const backupId = segments[1];
+    const sheets = body.sheets || [];
+    return BackupService.restoreFromBackup(backupId, sheets);
+  }
+
+  // GET /backup/verify/:backupId - Verify backup integrity
+  if (segments[0] === 'verify' && segments.length === 2 && method === 'GET') {
+    const backupId = segments[1];
+    return BackupService.verifyBackup(backupId);
+  }
+
+  // POST /backup/cleanup - Cleanup old backups
+  if (segments[0] === 'cleanup' && method === 'POST') {
+    const tahun = body.tahun || new Date().getFullYear();
+    const keepCount = body.keepCount || 10;
+    return BackupService.cleanupOldBackups(tahun, keepCount);
+  }
+
+  // POST /backup/setup-trigger - Setup daily backup trigger
+  if (segments[0] === 'setup-trigger' && method === 'POST') {
+    return setupDailyBackupTrigger();
+  }
+
+  return { success: false, error: 'Backup route not found' };
+}
+
+// ========================================
+// SPRINT 5: DOCUMENT MASTER ROUTES
+// ========================================
+
+function routeDocumentMaster(segments, method, params, body) {
+  // POST /document-master/setup - Setup document master sheet
+  if (segments[0] === 'setup' && method === 'POST') {
+    return DocumentFinalizationService.setupDocumentMasterSheet();
+  }
+
+  // GET /document-master/:docMasterId - Get document by ID
+  if (segments.length === 1 && method === 'GET') {
+    const doc = DocumentFinalizationService.getDocument(segments[0]);
+    if (doc) {
+      return { success: true, data: doc };
+    }
+    return { success: false, error: 'Document not found' };
+  }
+
+  // POST /document-master/register - Register new document
+  if (segments[0] === 'register' && method === 'POST') {
+    return DocumentFinalizationService.registerDocument(body);
+  }
+
+  // POST /document-master/number - Generate document number
+  if (segments[0] === 'number' && method === 'POST') {
+    const docType = body.docType;
+    const tahun = body.tahun || new Date().getFullYear();
+    return DocumentFinalizationService.generateDocumentNumber(docType, tahun);
+  }
+
+  // PUT /document-master/:docMasterId/finalize - Finalize document
+  if (segments.length === 2 && segments[1] === 'finalize' && method === 'PUT') {
+    const docMasterId = segments[0];
+    const finalizedBy = body.finalizedBy || 'System';
+    return DocumentFinalizationService.finalizeDocument(docMasterId, finalizedBy);
+  }
+
+  // PUT /document-master/:docMasterId/revise - Revise document
+  if (segments.length === 2 && segments[1] === 'revise' && method === 'PUT') {
+    const docMasterId = segments[0];
+    const reason = body.reason || 'Revision needed';
+    const revisedBy = body.revisedBy || 'System';
+    return DocumentFinalizationService.reviseDocument(docMasterId, reason, revisedBy);
+  }
+
+  // PUT /document-master/:docMasterId/void - Void document
+  if (segments.length === 2 && segments[1] === 'void' && method === 'PUT') {
+    const docMasterId = segments[0];
+    const reason = body.reason || 'Voided';
+    const voidedBy = body.voidedBy || 'System';
+    return DocumentFinalizationService.voidDocument(docMasterId, reason, voidedBy);
+  }
+
+  // GET /document-master/:docMasterId/can-edit - Check if document can be edited
+  if (segments.length === 2 && segments[1] === 'can-edit' && method === 'GET') {
+    const docMasterId = segments[0];
+    return { success: true, data: DocumentFinalizationService.canEdit(docMasterId) };
+  }
+
+  // GET /document-master/:docMasterId/history - Get revision history
+  if (segments.length === 2 && segments[1] === 'history' && method === 'GET') {
+    const docMasterId = segments[0];
+    return { success: true, data: DocumentFinalizationService.getRevisionHistory(docMasterId) };
+  }
+
+  // GET /document-master/list - List documents with filters
+  if (segments[0] === 'list' && method === 'GET') {
+    const filters = {
+      docType: params.docType || null,
+      status: params.status || null,
+      tahun: params.tahun || null,
+      refType: params.refType || null
+    };
+    return { success: true, data: DocumentFinalizationService.listDocuments(filters) };
+  }
+
+  return { success: false, error: 'Document Master route not found' };
+}
+
+// ========================================
+// SPRINT 5: AUDIT SIMULATION ROUTES
+// ========================================
+
+function routeAuditSimulation(segments, method, params, body) {
+  // GET /audit-simulation/paket/:paketId - Simulate audit for Paket
+  if (segments[0] === 'paket' && segments.length === 2 && method === 'GET') {
+    const paketId = segments[1];
+    return AuditSimulationService.simulateAuditPaket(paketId);
+  }
+
+  // GET /audit-simulation/pd/:pdId - Simulate audit for Perjalanan Dinas
+  if (segments[0] === 'pd' && segments.length === 2 && method === 'GET') {
+    const pdId = segments[1];
+    return AuditSimulationService.simulateAuditPD(pdId);
+  }
+
+  // GET /audit-simulation/required-docs/:stage - Get required documents for stage
+  if (segments[0] === 'required-docs' && segments.length === 2 && method === 'GET') {
+    const stage = segments[1];
+    return { success: true, data: AuditSimulationService.getRequiredDocuments(stage) };
+  }
+
+  // POST /audit-simulation/recommendations - Generate recommendations
+  if (segments[0] === 'recommendations' && method === 'POST') {
+    const findings = body.findings || [];
+    return { success: true, data: AuditSimulationService.generateRecommendations(findings) };
+  }
+
+  // POST /audit-simulation/report/paket/:paketId - Generate audit report for Paket
+  if (segments[0] === 'report' && segments[1] === 'paket' && segments.length === 3 && method === 'POST') {
+    const paketId = segments[2];
+    return AuditSimulationService.generateAuditReadinessReport(paketId, 'PAKET');
+  }
+
+  // POST /audit-simulation/report/pd/:pdId - Generate audit report for PD
+  if (segments[0] === 'report' && segments[1] === 'pd' && segments.length === 3 && method === 'POST') {
+    const pdId = segments[2];
+    return AuditSimulationService.generateAuditReadinessReport(pdId, 'PD');
+  }
+
+  return { success: false, error: 'Audit Simulation route not found' };
+}
+
+// ========================================
+// SPRINT 5: SOP GENERATOR ROUTES
+// ========================================
+
+function routeSOP(segments, method, params, body) {
+  // POST /sop/paket - Generate SOP Paket
+  if (segments[0] === 'paket' && method === 'POST') {
+    return SOPGeneratorService.generateSOPPaket();
+  }
+
+  // POST /sop/dokumen - Generate SOP Dokumen
+  if (segments[0] === 'dokumen' && method === 'POST') {
+    return SOPGeneratorService.generateSOPDokumen();
+  }
+
+  // POST /sop/audit-bundle - Generate SOP Audit Bundle
+  if (segments[0] === 'audit-bundle' && method === 'POST') {
+    return SOPGeneratorService.generateSOPAuditBundle();
+  }
+
+  // POST /sop/backup-restore - Generate SOP Backup & Restore
+  if (segments[0] === 'backup-restore' && method === 'POST') {
+    return SOPGeneratorService.generateSOPBackupRestore();
+  }
+
+  // POST /sop/all - Generate all SOPs
+  if (segments[0] === 'all' && method === 'POST') {
+    return SOPGeneratorService.generateAllSOPs();
+  }
+
+  return { success: false, error: 'SOP route not found' };
 }
